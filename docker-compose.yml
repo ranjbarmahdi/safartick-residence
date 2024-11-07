@@ -1,0 +1,126 @@
+version: '3.7'
+
+services:
+  node-app:
+    user: root
+    restart: always
+    build:
+      context: .
+    ports:
+      - "8000-8100:4008"
+    volumes:
+      - ./${DIRECTORY_NAME}:/usr/src/app/${DIRECTORY_NAME}
+    networks:
+      - custom_network
+
+  # node-app-2:
+  #   user: root
+  #   restart: always
+  #   build:
+  #     context: .
+  #   ports:
+  #     - "4012:4008"
+  #   volumes:
+  #     - ./-----:/usr/src/app/-----
+  #   networks:
+  #     - custom_network
+
+  # node-app-3:
+  #   user: root
+  #   restart: always
+  #   build:
+  #     context: .
+  #   ports:
+  #     - "4013:4008"
+  #   volumes:
+  #     - ./-----:/usr/src/app/-----
+  #   networks:
+  #     - custom_network
+
+  # node-app-4:
+  #   user: root
+  #   restart: always
+  #   build:
+  #     context: .
+  #   ports:
+  #     - "4014:4008"
+  #   volumes:
+  #     - ./-----:/usr/src/app/-----
+  #   networks:
+  #     - custom_network
+
+  # node-app-5:
+  #   user: root
+  #   restart: always
+  #   build:
+  #     context: .
+  #   ports:
+  #     - "4015:4008"
+  #   volumes:
+  #     - ./-----:/usr/src/app/-----
+  #   networks:
+  #     - custom_network
+
+  # node-app-6:
+  #   user: root
+  #   restart: always
+  #   build:
+  #     context: .
+  #   ports:
+  #     - "4016:4008"
+  #   volumes:
+  #     - ./-----:/usr/src/app/-----
+  #   networks:
+  #     - custom_network
+
+  # node-app-7:
+  #   user: root
+  #   restart: always
+  #   build:
+  #     context: .
+  #   ports:
+  #     - "4017:4008"
+  #   volumes:
+  #     - ./-----:/usr/src/app/-----
+  #   networks:
+  #     - custom_network
+
+  # node-app-8:
+  #   user: root
+  #   restart: always
+  #   build:
+  #     context: .
+  #   ports:
+  #     - "4018:4008"
+  #   volumes:
+  #     - ./-----:/usr/src/app/-----
+  #   networks:
+  #     - custom_network
+
+  # node-app-9:
+  #   user: root
+  #   restart: always
+  #   build:
+  #     context: .
+  #   ports:
+  #     - "4019:4008"
+  #   volumes:
+  #     - ./-----:/usr/src/app/-----
+  #   networks:
+  #     - custom_network
+
+  # node-app-10:
+  #   user: root
+  #   restart: always
+  #   build:
+  #     context: .
+  #   ports:
+  #     - "4020:4008"
+  #   volumes:
+  #     - ./-----:/usr/src/app/-----
+  #   networks:
+  #     - custom_network
+
+networks:
+  custom_network:
+    external: true
