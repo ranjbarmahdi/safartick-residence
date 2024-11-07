@@ -148,7 +148,7 @@ async function findAllProductsLinks(page, allPagesLinks) {
 // ============================================ Main
 async function main() {
     try {
-        const INITIAL_PAGE_URL = ['https://www.jabama.com/all-cottage'];
+        const INITIAL_PAGE_URL = [''];
 
         // get random proxy
         const proxyList = [''];
