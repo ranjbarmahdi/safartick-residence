@@ -1,4 +1,5 @@
-FROM arm64v8/node:14
+# Use a more up-to-date version of Node.js
+FROM arm64v8/node:16-slim
 WORKDIR /usr/src/app
 
 # Set the working directory for your application
