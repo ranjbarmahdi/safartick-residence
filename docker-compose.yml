@@ -1,18 +1,19 @@
 version: '3.7'
 
 services:
-  node-app:
-    user: root
-    restart: always
-    build:
-      context: .
-    ports:
-      - "8000-8100:4008"
-    volumes:
-      - ./${DIRECTORY_NAME}:/usr/src/app/${DIRECTORY_NAME}
-    networks:
-      - custom_network
+    node-app:
+        platform: linux/amd64 # Specify the platform
+        user: root
+        restart: always
+        build:
+            context: .
+        ports:
+            - '8000-8100:4008'
+        volumes:
+            - ./${DIRECTORY_NAME}:/usr/src/app/${DIRECTORY_NAME}
+        networks:
+            - custom_network
 
 networks:
-  custom_network:
-    external: true
+    custom_network:
+        external: true
