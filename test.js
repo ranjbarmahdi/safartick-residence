@@ -1,11 +1,9 @@
-const { CdpDialog } = require("puppeteer");
-const { v4: uuidv4 } = require("uuid");
+const isNumeric = (string) => /^[+-]?\d+(\.\d+)?$/.test(string);
 
-const uuids = []
-for(let i = 0; i < 100; i++){
-    const uuid = uuidv4().replace(/-/g, "");
-    uuids.push(uuid);
-
-}
-
-console.log(uuids)
+console.log(isNumeric('1234'));
+console.log(isNumeric('123.4'));
+console.log(isNumeric('012.3'));
+console.log(isNumeric('1234s'));
+console.log(isNumeric(''));
+console.log(isNumeric('  '));
+console.log(isNumeric('  s'));

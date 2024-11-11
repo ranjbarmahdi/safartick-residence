@@ -20,7 +20,7 @@ RUN npm install
 COPY . .
 
 # Expose port 3020 for your Node.js application
-EXPOSE 4008
+EXPOSE 3020
 
 # Change the CMD to run your desired Node.js script
-CMD ["node","app.js"]
+CMD ["node","findProductLinks.js"]

@@ -7,6 +7,9 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
+// ==================================== isNumeric
+const isNumeric = (string) => /^[+-]?\d+(\.\d+)?$/.test(string);
+
 // ==================================== click
 function persionMonthToDigit(month) {
     const months = [
@@ -302,4 +305,5 @@ module.exports = {
     checkMemoryCpu,
     persionMonthToDigit,
     click,
+    isNumeric,
 };

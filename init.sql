@@ -9,8 +9,8 @@ CREATE TABLE residence (
     province VARCHAR(100), 
     description TEXT, 
     facilities TEXT,
-    capacity INT, 
-    room_count INT, 
+    capacity TEXT, 
+    room_count TEXT, 
     amenities TEXT, 
     rules TEXT,
     host_name VARCHAR(255), 
@@ -31,9 +31,9 @@ CREATE TABLE comment (
     id SERIAL PRIMARY KEY,
     sku VARCHAR(50) NOT NULL,
     username VARCHAR(100) NOT NULL,
-    comment_date DATE NOT NULL,
     comment_text TEXT,
-    rating INT
+    comment_date TEXT ,
+    rating TEXT
 );
 
 
