@@ -2,7 +2,6 @@ version: '3.7'
 
 services:
     node-app:
-        platform: linux/amd64 # Specify the platform
         user: root
         restart: always
         build:
