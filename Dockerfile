@@ -1,5 +1,5 @@
-FROM arm64v8/node:14
-WORKDIR /usr/src/app
+# Use the Puppeteer base image
+FROM ghcr.io/puppeteer/puppeteer:19.7.2
 
 # Set the working directory for your application
 WORKDIR /usr/src/app
