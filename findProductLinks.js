@@ -62,7 +62,7 @@ async function findAllPagesLinks(page, mainLinks) {
             const url = mainLinks[i];
             console.log('============================================================');
             console.log('start findind pages for main link :', url);
-            await page.goto(url);
+            await page.goto(url, { timeout: 360000 });
 
             await delay(5000);
             const html = await page.content();
@@ -106,7 +106,7 @@ async function findAllProductsLinks(page, allPagesLinks) {
                 i + 1
             );
             console.log('Start Finding products urls from page :', url);
-            await page.goto(url, { timeout: 180000 });
+            await page.goto(url, { timeout: 360000 });
 
             // sleep 5 second when switching between pages
             console.log('-------sleep 5 second');
