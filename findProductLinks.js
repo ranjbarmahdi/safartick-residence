@@ -41,10 +41,10 @@ async function findAllMainLinks(page, initialUrl) {
         const $ = cheerio.load(html);
 
         // Getting All Main Urls In This Page
-        const mainLinks = ['https://www.jabama.com/province-mazandaran'];
+        const mainLinks = [];
 
         // Push This Page Products Urls To allProductsLinks
-        allMainLinks.push(...mainLinks);
+        allMainLinks.push(initialUrl);
     } catch (error) {
         console.log('Error In findAllMainLinks function', error.message);
     }
@@ -72,16 +72,13 @@ async function findAllPagesLinks(page, mainLinks) {
             const paginationElement = $('.pagination');
             if (paginationElement.length) {
                 lsatPageNumber = Math.max(
-                    ...$('.pagination > nav > a')
+                    ...$('#plpCards > div.w-full.flex.justify-center > div > a')
                         .filter((i, e) => isNumeric($(e).text().trim()))
                         .map((i, e) => Number($(e).text().trim()))
                         .get()
                 );
-                if (lsatPageNumber > 312) {
-                    lsatPageNumber = 312;
-                }
                 for (let j = 1; j <= lsatPageNumber; j++) {
-                    const newUrl = url + `?page-number=${j}`;
+                    const newUrl = url + `?page=${j}`;
                     allPagesLinks.push(newUrl);
                 }
             } else {
@@ -121,8 +118,8 @@ async function findAllProductsLinks(page, allPagesLinks) {
                 const $ = cheerio.load(html);
 
                 // Getting All Products Urls In This Page
-                const productsUrls = $('.plp-items > li > a')
-                    .map((i, e) => 'https://www.jabama.com' + $(e).attr('href'))
+                const productsUrls = $('article.RoomCard_container__NQ3TR > a')
+                    .map((i, e) => 'https://www.otaghak.com' + $(e).attr('href'))
                     .get();
 
                 // insert prooduct links to unvisited
@@ -152,14 +149,14 @@ async function findAllProductsLinks(page, allPagesLinks) {
 // ============================================ Main
 async function main() {
     try {
-        const INITIAL_PAGE_URL = ['https://www.jabama.com'];
+        const INITIAL_PAGE_URL = ['https://www.otaghak.com/landing/search/'];
 
         // get random proxy
         const proxyList = [''];
         const randomProxy = getRandomElement(proxyList);
 
         // Lunch Browser
-        const browser = await getBrowser(randomProxy, true, false);
+        const browser = await getBrowser(randomProxy, false, false);
         const page = await browser.newPage();
         await page.setViewport({
             width: 1920,
