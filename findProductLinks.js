@@ -69,7 +69,7 @@ async function findAllPagesLinks(page, mainLinks) {
             const $ = cheerio.load(html);
 
             // find last page number and preduce other pages urls
-            const paginationElement = $('.pagination');
+            const paginationElement = $('#plpCards > div.w-full.flex.justify-center > div > a');
             if (paginationElement.length) {
                 lsatPageNumber = Math.max(
                     ...$('#plpCards > div.w-full.flex.justify-center > div > a')
@@ -156,7 +156,7 @@ async function main() {
         const randomProxy = getRandomElement(proxyList);
 
         // Lunch Browser
-        const browser = await getBrowser(randomProxy, false, false);
+        const browser = await getBrowser(randomProxy, true, false);
         const page = await browser.newPage();
         await page.setViewport({
             width: 1920,
