@@ -77,6 +77,9 @@ async function findAllPagesLinks(page, mainLinks) {
                         .map((i, e) => Number($(e).text().trim()))
                         .get()
                 );
+                if (lsatPageNumber > 312) {
+                    lsatPageNumber = 312;
+                }
                 for (let j = 1; j <= lsatPageNumber; j++) {
                     const newUrl = url + `?page-number=${j}`;
                     allPagesLinks.push(newUrl);
