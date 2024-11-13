@@ -14,7 +14,8 @@ CREATE TABLE residence (
     amenities TEXT, 
     rules TEXT,
     host_name VARCHAR(255), 
-    contact_number VARCHAR(20)
+    contact_number VARCHAR(20),
+    average_rating TEXT
 );
 
 CREATE TABLE price (

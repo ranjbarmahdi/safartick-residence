@@ -106,8 +106,8 @@ async function insertUrlToVisited(url) {
 // ============================================ insertResidence
 async function insertResidence(queryValues) {
     const query = `
-          insert into residence ("sku", "url", "name", "city", "province", "description", "facilities", "capacity", "room_count", "amenities", "rules", "host_name", "contact_number")
-          values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);`;
+          insert into residence ("sku", "url", "name", "city", "province", "description", "facilities", "capacity", "room_count", "amenities", "rules", "host_name", "contact_number", "average_rating")
+          values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);`;
 
     try {
         const result = await db.oneOrNone(query, queryValues);
@@ -183,7 +183,6 @@ async function getPrice(page, xpaths, currency) {
     }
 }
 
-let start;
 // ============================================ scrapResidence
 async function scrapResidence(page, residenceURL, imagesDIR) {
     try {
@@ -206,32 +205,23 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
 
         data['name'] = $('h1').text().trim() ? $('h1').text().trim() : null;
 
-        data['city'] =
-            $('.city-province').text()?.replace('استان', '')?.trim()?.split('،')[1]?.trim() || null;
+        data['city'] = data['name']?.split('،')[1]?.replace('در', '')?.trim() || null;
 
-        data['province'] =
-            $('.city-province').text()?.replace('استان', '')?.trim()?.split('،')[0]?.trim() || null;
+        data['province'] = null;
 
         data['description'] =
-            $('.accommodation-description-content > div')
+            $('#RoomDescription > span')
                 .map((i, e) => $(e).text()?.trim())
                 .get()
                 .join('\n') || null;
 
         const facilities = {};
         data['facilities'] =
-            $(
-                '.accommodation-pdp-specifications__container > .accommodation-pdp-specification > .accommodation-pdp-specification-content'
-            )
+            $('#AboutRoom > div')
                 .map((i, e) => {
-                    const title = $(e)
-                        .find('.accommodation-pdp-specification-content__title')
-                        .text()
-                        ?.trim();
+                    const title = $(e).find('div > h3').text()?.trim();
                     const ambients = $(e)
-                        .find(
-                            '.accommodation-pdp-specification-description > .accommodation-pdp-specification-description__item'
-                        )
+                        .find('div > span')
                         .map((i, e) => $(e).text()?.trim())
                         .get()
                         .join('\n');
@@ -241,11 +231,11 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
                 .get()
                 .join('\n\n') || null;
 
-        data['capacity'] = facilities['ظرفیت'] || null;
+        data['capacity'] = facilities['ظرفیت اقامتگاه'] || null;
 
-        data['room_count'] = facilities['سرویس‌های خواب'] || null;
+        data['room_count'] = facilities['سرویس خواب'] || null;
 
-        await click(page, '.product-amenities__button');
+        await click(page, '#TopAttributes  button');
         await delay(3000);
 
         html = await page.content();
@@ -253,16 +243,16 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
 
         const amenities = {};
         data['amenities'] =
-            $(
-                '.product-modal .product-amenities-modal__content > div.product-amenities-modal-section'
-            )
+            $('.Modal_content__j50DE > .Modal_divider__mFcfa > div > div')
                 .map((i, e) => {
                     const title = $(e)
-                        .find('.product-amenities-modal-section__title')
+                        .find('.AttributeModal_mainAttrTitle__6bRDm > h4')
                         .text()
                         ?.trim();
                     const ambients = $(e)
-                        .find('.product-amenity > .product-amenity__main > .product-amenity__text')
+                        .find(
+                            '.AttributeModal_subAttrContainer__9g_xk > .AttributeModal_subTitleAttrContainer__XlhJV > p'
+                        )
                         .map((i, e) => $(e).text()?.trim())
                         .get()
                         .join('\n');
@@ -272,46 +262,43 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
                 .get()
                 .join('\n\n') || null;
 
-        await click(page, '.product-modal-header__close');
+        await click(page, '.Modal_content__j50DE button');
         await delay(1000);
 
         html = await page.content();
         $ = cheerio.load(html);
 
         data['rules'] =
-            $(
-                '.accommodation-additional-rules > .accommodation-additional-rules-list > .accommodation-additional-rules-list__item'
-            )
+            $('#RoomRules, #RoomHostRule')
+                .find('div > span')
                 .map((i, e) => $(e).text()?.trim())
                 .get()
                 .join('\n') || null;
 
-        data['host_name'] = $('.pdp-host .j-list-text__title').text().trim()
-            ? $('.pdp-host .j-list-text__title').text().trim()
+        data['host_name'] = $('#HostProfile > div > div > h3').text().trim()
+            ? $('#HostProfile > div > div > h3').text().trim()
             : null;
 
         data['contact_number'] = $('selector').text().trim() ? $('selector').text().trim() : null;
 
         // Calendar
         const calendar = [];
-        $('.vuec-month').map((i, e) => {
-            let [month, year] = $(e)
-                .find('.vuec-month-name')
-                ?.text()
-                ?.trim()
-                ?.split(' ')
-                ?.map((e) => e?.trim());
+        $('.Calendar_container__AQwuE > div').map((i, e) => {
+            let month = $(e).find('div:first > h4:first').text()?.trim();
+            let year = $(e).find('div:first > h4:last').text()?.trim();
             const monthDigit = persionMonthToDigit(month);
             const yearDigit = convertToEnglishNumber(year);
             const reservable = $(e)
-                .find('.vuec-month-content .vuec-day.selectable .calendar-range-day__holder')
+                .find(
+                    '>div:last > div:not(.Day_block__CkEZ4,.Day_hafDay__86Xu5,.Day_reserved__9_Jnt)'
+                )
                 .map((i, e) => {
                     const day = convertToEnglishNumber(
-                        $(e).find('.calendar-range-day__date').text()?.trim()
+                        $(e).find('.Day_title__Lil75').text()?.trim()
                     );
                     let price = convertToEnglishNumber(
                         $(e)
-                            .find('.calendar-range-day__price')
+                            .find('.Day_price__IWql3')
                             .text()
                             ?.replace(/[^\u06F0-\u06F90-9]/g, '')
                             ?.trim()
@@ -322,7 +309,7 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
                     const date = `${yearDigit}\/${monthDigit}\/${day}`;
                     const available = true;
                     let is_instant = false;
-                    if ($(e).hasClass('agenda')) {
+                    if ($(e).find('img').length) {
                         is_instant = true;
                     }
                     calendar.push({ date, price, available, is_instant });
@@ -332,23 +319,54 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
         data['calendar'] = calendar;
 
         // Comments
-        const comments = [];
-        $('.accommodation-abstract-comments > li > .comment-card').map((i, e) => {
-            const username = $(e)
-                .find('.comment-card-guest-info > div > .comment-card-guest-info__title')
-                .text()
-                ?.trim();
-            let rating =
-                5 -
-                    Number(
-                        $(e).find(
-                            '.comment-card-info > .accommodation-rate-star-chart > svg[fill="#E6E6E6"]'
-                        ).length
-                    ) || null;
+        const average_rating = {};
+        data['average_rating'] =
+            $('#RoomComments > .Rate_container__t_gwt > .Rate_section__M2go5')
+                .map((i, e) => {
+                    const title = $(e).find('>p').text()?.trim();
+                    const value = $(e).find('>.Rate_ratePoint___bDN8 > h4').text()?.trim();
+                    average_rating[title] = value;
+                    return `${title}:${value}`;
+                })
+                .get()
+                .join('\n') || null;
 
-            let comment_date = null;
+        await click(page, '#RoomComments > div > button');
+        await delay(3000);
+
+        html = await page.content();
+        $ = cheerio.load(html);
+
+        const comments = [];
+        $(
+            '.Modal_content__j50DE > div > .RoomComments_ModalComments__sUK1a > .RoomComments_commentContainer__ouzGE'
+        ).map((i, e) => {
+            const username =
+                $(e)
+                    .find(
+                        '.RoomComments_profileSection__TF6d0 > .RoomComments_profile__G1Ueg > div > .Typography_subtitle3__CujCe '
+                    )
+                    .text()
+                    ?.trim() || null;
+
+            let rating =
+                $(e)
+                    .find(
+                        '.RoomComments_profileSection__TF6d0 > .RoomComments_rate__Ko6e0 > .Typography_subtitle3__CujCe'
+                    )
+                    .text()
+                    ?.trim() || null;
+
+            let comment_date =
+                $(e)
+                    .find(
+                        '.RoomComments_profileSection__TF6d0 > .RoomComments_profile__G1Ueg > div > .Typography_body3__qkN_x '
+                    )
+                    .text()
+                    ?.trim() || null;
+
             const comment_text = $(e)
-                .find('.comment-card__content > .comment-card__text')
+                .find('.RoomComments_commentBody__qyP21 > span')
                 .filter((i, e) => $(e).text()?.trim())
                 .map((i, e) => $(e).text()?.trim())
                 .get()
@@ -359,35 +377,15 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
         data['comments'] = comments;
 
         // Download Images
-        const image_xpaths = [
-            '/html/body/div[1]/div/div/main/div/div[1]/article/header/div[2]/div//img[@class="gallery-img__image"]',
-        ];
+        // const image_xpaths = ['//*[@id="Images"]//div[contains(@class, "Images_master__a6x_z")]'];
 
-        let imageUrls = await Promise.all(
-            image_xpaths.map(async (_xpath) => {
-                try {
-                    await page.waitForXPath(_xpath, { timeout: 5000 });
-                } catch (error) {}
-
-                const imageElements = await page.$x(_xpath);
-
-                // Get the src attribute of each image element found by the XPath
-                const srcUrls = await Promise.all(
-                    imageElements.map(async (element) => {
-                        let src = await page.evaluate(
-                            (el) => el.getAttribute('src')?.replace(/(-[0-9]+x[0-9]+)/g, ''),
-                            element
-                        );
-                        return src;
-                    })
-                );
-
-                return srcUrls;
-            })
-        );
+        let imageUrls = $('#Images > .Images_master__a6x_z:not(.Images_tagsView__doiGA) > img')
+            .map((i, e) => $(e).attr('src')?.replace('X500', 'Medium')?.trim())
+            .get();
 
         imageUrls = imageUrls.flat();
         imageUrls = [...new Set(imageUrls)];
+        console.log('Download Images');
         await downloadImages(imageUrls, imagesDIR, data.sku);
 
         return data;
@@ -403,6 +401,7 @@ async function main() {
     let urlRow;
     let browser;
     let page;
+    console.time();
     try {
         const DATA_DIR = path.normalize(__dirname + `/${process.env.DIRECTORY_NAME}`);
         const IMAGES_DIR = path.normalize(DATA_DIR + '/images');
@@ -447,6 +446,7 @@ async function main() {
                 residenceInfo.rules,
                 residenceInfo.host_name,
                 residenceInfo.contact_number,
+                residenceInfo.average_rating,
             ];
 
             // if exists ResidenceInfo insert it to Residences
@@ -454,6 +454,7 @@ async function main() {
                 await insertResidence(insertQueryInput);
                 await insertUrlToVisited(urlRow?.url);
 
+                console.log('Insert Prices');
                 const calendar = residenceInfo.calendar;
                 const calendarPromises = calendar.map(({ date, price, is_instant }) =>
                     insertPrice([residenceInfo.sku, residenceInfo.url, date, price, is_instant])
@@ -461,6 +462,7 @@ async function main() {
 
                 await Promise.all(calendarPromises);
 
+                console.log('Insert Comments');
                 const comments = residenceInfo.comments;
                 const commentsPromises = comments.map(
                     ({ username, rating, comment_date, comment_text }) =>
@@ -481,8 +483,7 @@ async function main() {
         await insertUrlToProblem(urlRow?.url);
     } finally {
         // Close page and browser
-        const result = (new Date() - start) / 6000;
-        console.log(result);
+        console.timeEnd();
         console.log('End');
         if (page) await page.close();
         if (browser) await browser.close();
@@ -546,5 +547,5 @@ async function run_2(memoryUsagePercentage, cpuUsagePercentage, usageMemory) {
 
 // job.start()
 
-// run_1(80, 80, 20);
-run_2(80, 80, 20);
+run_1(80, 80, 20);
+// run_2(80, 80, 20);
