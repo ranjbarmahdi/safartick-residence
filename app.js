@@ -424,7 +424,7 @@ async function main() {
 
             // Lunch Browser
             await delay(Math.random() * 4000);
-            browser = await getBrowser(randomProxy, true, false);
+            browser = await getBrowser(randomProxy, false, false);
             page = await browser.newPage();
             await page.setViewport({
                 width: 1920,
