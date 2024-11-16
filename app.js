@@ -320,15 +320,23 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
 
         // Comments
         const average_rating = {};
+        if ($('#RoomComments > .RoomComments_title__Yz6QI > h4').length) {
+            average_rating['امتیاز کلی'] = $('#RoomComments > .RoomComments_title__Yz6QI > h4')
+                .text()
+                ?.replace('امتیاز', '')
+                ?.trim();
+        }
+
+        $('#RoomComments > .Rate_container__t_gwt > .Rate_section__M2go5').map((i, e) => {
+            const title = $(e).find('>p').text()?.trim();
+            const value = $(e).find('>.Rate_ratePoint___bDN8 > h4').text()?.trim();
+            average_rating[title] = value;
+            return `${title}:${value}`;
+        });
+
         data['average_rating'] =
-            $('#RoomComments > .Rate_container__t_gwt > .Rate_section__M2go5')
-                .map((i, e) => {
-                    const title = $(e).find('>p').text()?.trim();
-                    const value = $(e).find('>.Rate_ratePoint___bDN8 > h4').text()?.trim();
-                    average_rating[title] = value;
-                    return `${title}:${value}`;
-                })
-                .get()
+            Object.keys(average_rating)
+                .map((key) => `${key}:${average_rating[key]}`)
                 .join('\n') || null;
 
         await click(page, '#RoomComments > div > button');
@@ -424,11 +432,11 @@ async function main() {
 
             // Lunch Browser
             await delay(Math.random() * 4000);
-            browser = await getBrowser(randomProxy, false, false);
+            browser = await getBrowser(randomProxy, true, false);
             page = await browser.newPage();
             await page.setViewport({
-                width: 1920,
-                height: 1080,
+                width: 1440,
+                height: 810,
             });
 
             const residenceInfo = await scrapResidence(page, urlRow.url, IMAGES_DIR);
