@@ -69,10 +69,10 @@ async function findAllPagesLinks(page, mainLinks) {
             const $ = cheerio.load(html);
 
             // find last page number and preduce other pages urls
-            const paginationElement = $('#plpCards > div.w-full.flex.justify-center > div > a');
+            const paginationElement = $('ul.MuiPagination-ul > li');
             if (paginationElement.length) {
-                lsatPageNumber = Math.max(
-                    ...$('#plpCards > div.w-full.flex.justify-center > div > a')
+                let lsatPageNumber = Math.max(
+                    ...$('ul.MuiPagination-ul > li')
                         .filter((i, e) => isNumeric($(e).text().trim()))
                         .map((i, e) => Number($(e).text().trim()))
                         .get()
@@ -118,8 +118,8 @@ async function findAllProductsLinks(page, allPagesLinks) {
                 const $ = cheerio.load(html);
 
                 // Getting All Products Urls In This Page
-                const productsUrls = $('article.RoomCard_container__NQ3TR > a')
-                    .map((i, e) => 'https://www.otaghak.com' + $(e).attr('href'))
+                const productsUrls = $('a.ProductCard_link_to_card_section__BTNKo')
+                    .map((i, e) => 'https://www.shab.ir' + $(e).attr('href'))
                     .get();
 
                 // insert prooduct links to unvisited
@@ -149,7 +149,7 @@ async function findAllProductsLinks(page, allPagesLinks) {
 // ============================================ Main
 async function main() {
     try {
-        const INITIAL_PAGE_URL = ['https://www.otaghak.com/landing/search/'];
+        const INITIAL_PAGE_URL = ['https://www.shab.ir/search'];
 
         // get random proxy
         const proxyList = [''];
