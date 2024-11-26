@@ -7,6 +7,8 @@ const {
     convertToEnglishNumber,
     persionMonthToDigit,
     click,
+    scrollModal,
+    scrollToEnd,
 } = require('./utils');
 const omitEmpty = require('omit-empty');
 const { v4: uuidv4 } = require('uuid');
@@ -194,6 +196,18 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
 
         await delay(5000);
 
+        // Remove all <iframe> tags except the ones with class ".goftino_w"
+        await page.evaluate(() => {
+            const iframes = document.querySelectorAll('iframe');
+            iframes.forEach((iframe) => {
+                if (!iframe.classList.contains('goftino_w')) {
+                    iframe.remove(); // Remove iframe
+                }
+            });
+        });
+
+        await scrollToEnd(page);
+
         let html = await page.content();
         let $ = cheerio.load(html);
 
@@ -203,25 +217,41 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
 
         data['url'] = residenceURL;
 
-        data['name'] = $('h1').text().trim() ? $('h1').text().trim() : null;
+        data['name'] = $('h1').text().trim() || null;
 
-        data['city'] = data['name']?.split('،')[1]?.replace('در', '')?.trim() || null;
+        data['city'] =
+            $('.TitleReviewsAndLocation_location__hbuUd .Typography_bodyM__0rg69 ')
+                .text()
+                .split('،')[0]
+                ?.trim() || null;
 
         data['province'] = null;
 
+        await click(page, '.HouseAbout_house-about___KcbT .ShowMorePopUp_more__6nw5K > button');
+        await delay(3000);
+
+        html = await page.content();
+        $ = cheerio.load(html);
+
         data['description'] =
-            $('#RoomDescription > span')
+            $('.ShowMorePopUp_content__MMrv9 > p')
                 .map((i, e) => $(e).text()?.trim())
                 .get()
                 .join('\n') || null;
 
+        await click(page, '.ShowMorePopUp_header__ADzA1 > button');
+        await delay(1000);
+
+        html = await page.content();
+        $ = cheerio.load(html);
+
         const facilities = {};
         data['facilities'] =
-            $('#AboutRoom > div')
+            $('.HouseInformation_content__JvDHv > div > div')
                 .map((i, e) => {
-                    const title = $(e).find('div > h3').text()?.trim();
+                    const title = $(e).find('span:first').text()?.trim();
                     const ambients = $(e)
-                        .find('div > span')
+                        .find('span:last')
                         .map((i, e) => $(e).text()?.trim())
                         .get()
                         .join('\n');
@@ -231,11 +261,16 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
                 .get()
                 .join('\n\n') || null;
 
-        data['capacity'] = facilities['ظرفیت اقامتگاه'] || null;
+        data['capacity'] =
+            $('.HouseInformation_capacity-content__jco7i > span:last').text().trim() || null;
 
-        data['room_count'] = facilities['سرویس خواب'] || null;
+        data['room_count'] =
+            $('.HouseInformation_beds-content__T40r1 > span:last').text().trim() || null;
 
-        await click(page, '#TopAttributes  button');
+        await click(
+            page,
+            '.HouseFeatures_house-features__f0cw5 .ShowMorePopUp_more__6nw5K > button'
+        );
         await delay(3000);
 
         html = await page.content();
@@ -243,16 +278,11 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
 
         const amenities = {};
         data['amenities'] =
-            $('.Modal_content__j50DE > .Modal_divider__mFcfa > div > div')
+            $('.ShowMorePopUp_content__MMrv9 > div > div:not(.HouseFeatures_empty-texts__I9BO1)')
                 .map((i, e) => {
-                    const title = $(e)
-                        .find('.AttributeModal_mainAttrTitle__6bRDm > h4')
-                        .text()
-                        ?.trim();
+                    const title = $(e).find('> h3').text()?.trim();
                     const ambients = $(e)
-                        .find(
-                            '.AttributeModal_subAttrContainer__9g_xk > .AttributeModal_subTitleAttrContainer__XlhJV > p'
-                        )
+                        .find('>div .Typography_bodyL__kyuAJ')
                         .map((i, e) => $(e).text()?.trim())
                         .get()
                         .join('\n');
@@ -262,43 +292,48 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
                 .get()
                 .join('\n\n') || null;
 
-        await click(page, '.Modal_content__j50DE button');
+        await click(page, '.ShowMorePopUp_header__ADzA1 > button');
         await delay(1000);
 
         html = await page.content();
         $ = cheerio.load(html);
 
         data['rules'] =
-            $('#RoomRules, #RoomHostRule')
-                .find('div > span')
+            $('.Rules_left-rules-container__0HcFa')
+                .find(
+                    '.RulesItem_header-rules-item__ga8_x > span, .RulesDescription_description-rules-item__96I_s > span'
+                )
                 .map((i, e) => $(e).text()?.trim())
                 .get()
                 .join('\n') || null;
 
-        data['host_name'] = $('#HostProfile > div > div > h3').text().trim()
-            ? $('#HostProfile > div > div > h3').text().trim()
-            : null;
+        data['host_name'] =
+            $(
+                '.HostProfile_host-profile-content__AHipT > .HostProfile_host-profile__w2KCy > .HostProfile_host-name__6G_Jl'
+            )
+                .text()
+                .replace('میزبان', '')
+                ?.trim() || null;
 
         data['contact_number'] = $('selector').text().trim() ? $('selector').text().trim() : null;
 
         // Calendar
         const calendar = [];
-        $('.Calendar_container__AQwuE > div').map((i, e) => {
-            let month = $(e).find('div:first > h4:first').text()?.trim();
-            let year = $(e).find('div:first > h4:last').text()?.trim();
+        $('.calendar-wrapper > .calendar-days-container > .days-container').map((i, e) => {
+            const yearAndMonthElements = $('.rtl-mui-1t6c6c4 > div')[i];
+            let month = $(yearAndMonthElements).find('.date-months-names').text().split(' ')[0];
+            let year = $(yearAndMonthElements).find('.date-months-names').text().split(' ')[1];
             const monthDigit = persionMonthToDigit(month);
             const yearDigit = convertToEnglishNumber(year);
             const reservable = $(e)
-                .find(
-                    '>div:last > div:not(.Day_block__CkEZ4,.Day_hafDay__86Xu5,.Day_reserved__9_Jnt)'
-                )
+                .find('.day-tag:not(.empty-day-tag, .day-is-disabled, .day-is-reserved)')
                 .map((i, e) => {
                     const day = convertToEnglishNumber(
-                        $(e).find('.Day_title__Lil75').text()?.trim()
+                        $(e).find('> .day-label > .day-label-dates .rtl-mui-1v8bccv').text()?.trim()
                     );
                     let price = convertToEnglishNumber(
                         $(e)
-                            .find('.Day_price__IWql3')
+                            .find('> .day-label > .day-label-dates > .price:first')
                             .text()
                             ?.replace(/[^\u06F0-\u06F90-9]/g, '')
                             ?.trim()
@@ -309,7 +344,10 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
                     const date = `${yearDigit}\/${monthDigit}\/${day}`;
                     const available = true;
                     let is_instant = false;
-                    if ($(e).find('img').length) {
+                    if (
+                        $(e).find('> .day-label > .day-label-dates .date-picker-instant-icon')
+                            .length
+                    ) {
                         is_instant = true;
                     }
                     calendar.push({ date, price, available, is_instant });
@@ -320,61 +358,58 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
 
         // Comments
         const average_rating = {};
-        if ($('#RoomComments > .RoomComments_title__Yz6QI > h4').length) {
-            average_rating['امتیاز کلی'] = $('#RoomComments > .RoomComments_title__Yz6QI > h4')
-                .text()
-                ?.replace('امتیاز', '')
-                ?.trim();
-        }
 
-        $('#RoomComments > .Rate_container__t_gwt > .Rate_section__M2go5').map((i, e) => {
-            const title = $(e).find('>p').text()?.trim();
-            const value = $(e).find('>.Rate_ratePoint___bDN8 > h4').text()?.trim();
+        $('.ReviewsContainer_reviews-rate-items__Fqvua > .rtl-mui-1tiyaz6').map((i, e) => {
+            const title = $(e).find('> .rtl-mui-3yuszo').text()?.trim();
+            const value = $(e).find('> .rtl-mui-yfj0b0').text().replace('از5', '')?.trim();
             average_rating[title] = value;
             return `${title}:${value}`;
         });
+
+        if (average_rating.hasOwnProperty('امتیاز اقامتگاه')) {
+            average_rating['امتیاز کلی'] = average_rating['امتیاز اقامتگاه'];
+            delete average_rating['امتیاز اقامتگاه'];
+        }
 
         data['average_rating'] =
             Object.keys(average_rating)
                 .map((key) => `${key}:${average_rating[key]}`)
                 .join('\n') || null;
 
-        await click(page, '#RoomComments > div > button');
+        await click(page, '.ReviewsContainer_show-all-reviews__LJ4dt > button');
         await delay(3000);
+
+        await scrollModal(
+            page,
+            '.Modal_modal-content__8hZOw > .ReviewsModal_reviews-modal___EoTg > .ReviewsModal_review-modal-main-container__dyu4D > .ReviewsModal_reviews-items-container__tvl87 > .infinite-scroll-component__outerdiv > .ReviewsModal_reviews-list-wrapper__gG3yf',
+            100,
+            100
+        );
 
         html = await page.content();
         $ = cheerio.load(html);
 
         const comments = [];
-        $(
-            '.Modal_content__j50DE > div > .RoomComments_ModalComments__sUK1a > .RoomComments_commentContainer__ouzGE'
-        ).map((i, e) => {
+        $('.infinite-scroll-component__outerdiv .rtl-mui-1rjsml5').map((i, e) => {
             const username =
                 $(e)
-                    .find(
-                        '.RoomComments_profileSection__TF6d0 > .RoomComments_profile__G1Ueg > div > .Typography_subtitle3__CujCe '
-                    )
+                    .find('>.user-information-wrapper > .user-review-info > .suggestion > span')
                     .text()
                     ?.trim() || null;
 
             let rating =
-                $(e)
-                    .find(
-                        '.RoomComments_profileSection__TF6d0 > .RoomComments_rate__Ko6e0 > .Typography_subtitle3__CujCe'
-                    )
-                    .text()
-                    ?.trim() || null;
+                $(e).find(
+                    '>.user-information-wrapper > .user-review-info > .review-details-wrapper > .rate-box > .icon-star-Filled'
+                ).length +
+                    $(e).find(
+                        '>.user-information-wrapper > .user-review-info > .review-details-wrapper > .rate-box > .icon-star-half-Filled'
+                    ).length /
+                        2 || null;
 
-            let comment_date =
-                $(e)
-                    .find(
-                        '.RoomComments_profileSection__TF6d0 > .RoomComments_profile__G1Ueg > div > .Typography_body3__qkN_x '
-                    )
-                    .text()
-                    ?.trim() || null;
+            let comment_date = $(e).find('NotFound').text()?.trim() || null;
 
             const comment_text = $(e)
-                .find('.RoomComments_commentBody__qyP21 > span')
+                .find('.positive-negative-container > div > .rtl-mui-3yuszo , .rtl-mui-1yfqltl')
                 .filter((i, e) => $(e).text()?.trim())
                 .map((i, e) => $(e).text()?.trim())
                 .get()
@@ -384,11 +419,8 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
 
         data['comments'] = comments;
 
-        // Download Images
-        // const image_xpaths = ['//*[@id="Images"]//div[contains(@class, "Images_master__a6x_z")]'];
-
-        let imageUrls = $('#Images > .Images_master__a6x_z:not(.Images_tagsView__doiGA) > img')
-            .map((i, e) => $(e).attr('src')?.replace('X500', 'Medium')?.trim())
+        let imageUrls = $('#images > .rtl-mui-ecpffk img')
+            .map((i, e) => $(e).attr('src')?.trim())
             .get();
 
         imageUrls = imageUrls.flat();
@@ -433,7 +465,20 @@ async function main() {
             // Lunch Browser
             await delay(Math.random() * 4000);
             browser = await getBrowser(randomProxy, true, false);
-            page = await browser.newPage();
+
+            // Create a new browser context with no notifications
+            const context = await browser.createIncognitoBrowserContext();
+
+            // Create a new page in the incognito context
+            page = await context.newPage();
+
+            // Block notifications by overriding the permissions
+            await page.evaluateOnNewDocument(() => {
+                // Block notification permission requests
+                const originalPrompt = window.Notification.requestPermission;
+                window.Notification.requestPermission = () => Promise.resolve('denied');
+            });
+
             await page.setViewport({
                 width: 1440,
                 height: 810,

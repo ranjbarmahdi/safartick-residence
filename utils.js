@@ -116,6 +116,47 @@ async function scrollToEnd(page) {
     });
 }
 
+//============================================ scrollModal
+const scrollModal = async (page, modalSelector, scrollAmount = 1, waitTime = 20) => {
+    const modal = await page.$(modalSelector);
+    if (!modal) {
+        console.error(`Modal with selector "${modalSelector}" not found.`);
+        return;
+    }
+
+    await page.evaluate(
+        async (modalSelector, scrollAmount, waitTime) => {
+            const modal = document.querySelector(modalSelector);
+            if (!modal) {
+                console.error(`Modal with selector "${modalSelector}" not found in the DOM.`);
+                return;
+            }
+
+            await new Promise((resolve) => {
+                let totalScrolled = 0;
+                const scrollInterval = setInterval(() => {
+                    const { scrollTop, scrollHeight, clientHeight } = modal;
+
+                    // Scroll the modal by the specified amount
+                    modal.scrollBy(0, scrollAmount);
+                    totalScrolled += scrollAmount;
+
+                    // Stop scrolling if the bottom of the modal is reached
+                    if (scrollTop + clientHeight >= scrollHeight) {
+                        clearInterval(scrollInterval);
+                        resolve();
+                    }
+                }, waitTime); // Wait between scrolls
+            });
+        },
+        modalSelector,
+        scrollAmount,
+        waitTime
+    );
+
+    console.log('Modal scrolling completed.');
+};
+
 //============================================ choose a random element from an array
 const getRandomElement = (array) => {
     const randomIndex = Math.floor(Math.random() * array.length);
@@ -215,8 +256,11 @@ const getBrowser = async (proxyServer, headless = true, withProxy = true) => {
             if (withProxy == true) {
                 console.log('terue');
                 return [
+                    '--disable-notifications',
                     '--no-sandbox',
+                    '--disable-infobars',
                     '--disable-setuid-sandbox',
+                    '--disable-popup-blocking',
                     `--proxy-server=${proxyServer}`,
                 ];
             } else {
@@ -305,4 +349,5 @@ module.exports = {
     persionMonthToDigit,
     click,
     isNumeric,
+    scrollModal,
 };
