@@ -194,7 +194,7 @@ async function main() {
         const randomProxy = getRandomElement(proxyList);
 
         // Lunch Browser
-        const browser = await getBrowser(randomProxy, false, false);
+        const browser = await getBrowser(randomProxy, true, false);
         const page = await browser.newPage();
         await page.setViewport({
             width: 1920,
