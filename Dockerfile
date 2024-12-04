@@ -23,4 +23,4 @@ COPY . .
 EXPOSE 4008
 
 # Change the CMD to run your desired Node.js script
-CMD ["node","app.js"]
+CMD ["node","findProductLinks.js"]

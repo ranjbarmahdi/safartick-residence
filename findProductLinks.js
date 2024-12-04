@@ -41,15 +41,43 @@ async function findAllMainLinks(page, initialUrl) {
         const $ = cheerio.load(html);
 
         // Getting All Main Urls In This Page
-        const mainLinks = [];
+        const mainLinks = [
+            'https://www.homsa.net/province-tehran',
+            'https://www.homsa.net/province-mazandaran',
+            'https://www.homsa.net/province-gilan',
+        ];
 
         // Push This Page Products Urls To allProductsLinks
-        allMainLinks.push(initialUrl);
+        allMainLinks.push(...mainLinks);
     } catch (error) {
         console.log('Error In findAllMainLinks function', error.message);
     }
 
     return Array.from(new Set(allMainLinks));
+}
+
+function getLastPageNumber(text) {
+    // Normalize spaces and strip unwanted characters
+    const normalizedText = text.replace(/\s+/g, ' ').trim();
+
+    // Use a regular expression to extract numbers
+    const numberPattern = /(\d+)\s*[\–-]\s*(\d+)\s+\D+(\d+)/;
+    const match = normalizedText.match(numberPattern);
+
+    if (match && match[3]) {
+        // The total number of items is expected as the third capture group
+        const totalItems = parseInt(match[3], 10);
+
+        // Calculate the last page number
+        const itemsPerPage = 24;
+        const lastPageNumber = Math.ceil(totalItems / itemsPerPage);
+
+        return lastPageNumber;
+    }
+
+    // If the pattern doesn't match, return null or throw an error
+    console.error('Could not extract total items from text.');
+    return null;
 }
 
 // ============================================ findAllPagesLinks
@@ -64,19 +92,23 @@ async function findAllPagesLinks(page, mainLinks) {
             console.log('start findind pages for main link :', url);
             await page.goto(url, { timeout: 360000 });
 
-            await delay(5000);
+            await delay(20000);
+            // find last page number and preduce other pages urls
+
+            try {
+                await page.waitForSelector('p.ng-binding', { timeout: 120000 });
+            } catch (error) {
+                console.log('not found pagination');
+            }
+
             const html = await page.content();
             const $ = cheerio.load(html);
 
-            // find last page number and preduce other pages urls
-            const paginationElement = $('#plpCards > div.w-full.flex.justify-center > div > a');
+            const paginationElement = $('p.ng-binding');
             if (paginationElement.length) {
-                lsatPageNumber = Math.max(
-                    ...$('#plpCards > div.w-full.flex.justify-center > div > a')
-                        .filter((i, e) => isNumeric($(e).text().trim()))
-                        .map((i, e) => Number($(e).text().trim()))
-                        .get()
-                );
+                const t = $('p.ng-binding').text().replace(/\s+/g, ' ').trim();
+                let lsatPageNumber = getLastPageNumber(t);
+                console.log(`lsatPageNumber = ${lsatPageNumber}`);
                 for (let j = 1; j <= lsatPageNumber; j++) {
                     const newUrl = url + `?page=${j}`;
                     allPagesLinks.push(newUrl);
@@ -107,7 +139,13 @@ async function findAllProductsLinks(page, allPagesLinks) {
 
             // sleep 5 second when switching between pages
             console.log('-------sleep 5 second');
-            await delay(5000);
+
+            try {
+                await page.waitForSelector('a.room-card-link', { timeout: 20000 });
+                console.log('Selector found!');
+            } catch (error) {
+                console.error('Selector not found or an error occurred:', error);
+            }
 
             let nextPageBtn;
             let c = 0;
@@ -118,8 +156,8 @@ async function findAllProductsLinks(page, allPagesLinks) {
                 const $ = cheerio.load(html);
 
                 // Getting All Products Urls In This Page
-                const productsUrls = $('article.RoomCard_container__NQ3TR > a')
-                    .map((i, e) => 'https://www.otaghak.com' + $(e).attr('href'))
+                const productsUrls = $('a.room-card-link')
+                    .map((i, e) => $(e).attr('href'))
                     .get();
 
                 // insert prooduct links to unvisited
@@ -149,14 +187,14 @@ async function findAllProductsLinks(page, allPagesLinks) {
 // ============================================ Main
 async function main() {
     try {
-        const INITIAL_PAGE_URL = ['https://www.otaghak.com/landing/search/'];
+        const INITIAL_PAGE_URL = ['https://www.homsa.net/'];
 
         // get random proxy
         const proxyList = [''];
         const randomProxy = getRandomElement(proxyList);
 
         // Lunch Browser
-        const browser = await getBrowser(randomProxy, true, false);
+        const browser = await getBrowser(randomProxy, false, false);
         const page = await browser.newPage();
         await page.setViewport({
             width: 1920,
