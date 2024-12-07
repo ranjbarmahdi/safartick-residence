@@ -56,30 +56,6 @@ async function findAllMainLinks(page, initialUrl) {
     return Array.from(new Set(allMainLinks));
 }
 
-function getLastPageNumber(text) {
-    // Normalize spaces and strip unwanted characters
-    const normalizedText = text.replace(/\s+/g, ' ').trim();
-
-    // Use a regular expression to extract numbers
-    const numberPattern = /(\d+)\s*[\–-]\s*(\d+)\s+\D+(\d+)/;
-    const match = normalizedText.match(numberPattern);
-
-    if (match && match[3]) {
-        // The total number of items is expected as the third capture group
-        const totalItems = parseInt(match[3], 10);
-
-        // Calculate the last page number
-        const itemsPerPage = 24;
-        const lastPageNumber = Math.ceil(totalItems / itemsPerPage);
-
-        return lastPageNumber;
-    }
-
-    // If the pattern doesn't match, return null or throw an error
-    console.error('Could not extract total items from text.');
-    return null;
-}
-
 // ============================================ findAllPagesLinks
 async function findAllPagesLinks(page, mainLinks) {
     let allPagesLinks = [];
@@ -92,9 +68,6 @@ async function findAllPagesLinks(page, mainLinks) {
             console.log('start findind pages for main link :', url);
             await page.goto(url, { timeout: 360000 });
 
-            await delay(20000);
-            // find last page number and preduce other pages urls
-
             try {
                 await page.waitForSelector('p.ng-binding', { timeout: 120000 });
             } catch (error) {
@@ -104,11 +77,15 @@ async function findAllPagesLinks(page, mainLinks) {
             const html = await page.content();
             const $ = cheerio.load(html);
 
-            const paginationElement = $('p.ng-binding');
+            // find last page number and preduce other pages urls
+            const paginationElement = $('ul.MuiPagination-ul > li');
             if (paginationElement.length) {
-                const t = $('p.ng-binding').text().replace(/\s+/g, ' ').trim();
-                let lsatPageNumber = getLastPageNumber(t);
-                console.log(`lsatPageNumber = ${lsatPageNumber}`);
+                let lsatPageNumber = Math.max(
+                    ...$('ul.MuiPagination-ul > li')
+                        .filter((i, e) => isNumeric($(e).text().trim()))
+                        .map((i, e) => Number($(e).text().trim()))
+                        .get()
+                );
                 for (let j = 1; j <= lsatPageNumber; j++) {
                     const newUrl = url + `?page=${j}`;
                     allPagesLinks.push(newUrl);
@@ -124,7 +101,6 @@ async function findAllPagesLinks(page, mainLinks) {
     allPagesLinks = shuffleArray(allPagesLinks);
     return Array.from(new Set(allPagesLinks));
 }
-
 // ============================================ findAllProductsLinks
 async function findAllProductsLinks(page, allPagesLinks) {
     for (let i = 0; i < allPagesLinks.length; i++) {
