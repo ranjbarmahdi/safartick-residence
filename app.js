@@ -203,11 +203,17 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
 
         data['url'] = residenceURL;
 
-        data['name'] = $('h1').text().trim() ? $('h1').text().trim() : null;
+        data['name'] = $('h1').text().trim() || null;
 
-        data['city'] = data['name']?.split('،')[1]?.replace('در', '')?.trim() || null;
+        data['city'] =
+            $('body > main > div > div > div > div > div > div > div > ul > li:nth-child(2)')
+                .text()
+                .trim() || null;
 
-        data['province'] = null;
+        data['province'] =
+            $('body > main > div > div > div > div > div > div > div > ul > li:nth-child(1)')
+                .text()
+                .trim() || null;
 
         data['description'] =
             $('#RoomDescription > span')
@@ -216,43 +222,70 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
                 .join('\n') || null;
 
         const facilities = {};
+        facilities['درباره بنا'] = $('#information div:contains(درباره بنا):last')
+            .parent()
+            .find('> div.d-flex')
+            .map((i, e) => {
+                const k = $(e).find('> span:first').text().trim();
+                const v = $(e).find('> span:last').text().trim();
+                return `${k} ${v}`;
+            })
+            .get()
+            .join('\n');
+
+        facilities['ظرفیت'] = $('#information div:contains(ظرفیت):last')
+            .parent()
+            .find('> div.d-flex')
+            .map((i, e) => {
+                const k = $(e).find('> span:first').text().trim();
+                const v = $(e).find('> span:last').text().trim();
+                return `${k} ${v}`;
+            })
+            .get()
+            .join('\n');
+
+        facilities['سرویس خواب'] = $('#information div:contains(سرویس خواب):last')
+            .parent()
+            .nextAll('div.col-sm-6.col-12')
+            .find('> div.d-flex')
+            .map((i, e) => {
+                const k = $(e).find('> span:first').text().trim();
+                const v = $(e).find('> span:last').text().trim();
+                return `${k} ${v}`;
+            })
+            .get()
+            .join('\n');
+
+        facilities['امنیت ملک'] = $('#information div:contains(امنیت ملک):last')
+            .next('div')
+            .find('> ul > li')
+            .map((i, e) => $(e).text().trim())
+            .get()
+            .join('\n');
+
+        facilities['مناطق گردشگری اطراف'] = $('#information div:contains(مناطق گردشگری اطراف):last')
+            .next('div')
+            .find('> ul > li')
+            .map((i, e) => $(e).text().trim())
+            .get()
+            .join('\n');
+
         data['facilities'] =
-            $('#AboutRoom > div')
-                .map((i, e) => {
-                    const title = $(e).find('div > h3').text()?.trim();
-                    const ambients = $(e)
-                        .find('div > span')
-                        .map((i, e) => $(e).text()?.trim())
-                        .get()
-                        .join('\n');
-                    facilities[title] = ambients;
-                    return `${title}:\n${ambients}`;
-                })
-                .get()
+            Object.keys(facilities)
+                .map((key) => `${key}:\n${facilities[key]}`)
                 .join('\n\n') || null;
 
         data['capacity'] = facilities['ظرفیت اقامتگاه'] || null;
 
         data['room_count'] = facilities['سرویس خواب'] || null;
 
-        await click(page, '#TopAttributes  button');
-        await delay(3000);
-
-        html = await page.content();
-        $ = cheerio.load(html);
-
         const amenities = {};
         data['amenities'] =
-            $('.Modal_content__j50DE > .Modal_divider__mFcfa > div > div')
+            $('#services')
                 .map((i, e) => {
-                    const title = $(e)
-                        .find('.AttributeModal_mainAttrTitle__6bRDm > h4')
-                        .text()
-                        ?.trim();
+                    const title = 'امکانات اقامتگاه';
                     const ambients = $(e)
-                        .find(
-                            '.AttributeModal_subAttrContainer__9g_xk > .AttributeModal_subTitleAttrContainer__XlhJV > p'
-                        )
+                        .find('> div > div > div')
                         .map((i, e) => $(e).text()?.trim())
                         .get()
                         .join('\n');

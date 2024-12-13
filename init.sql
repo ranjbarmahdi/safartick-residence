@@ -31,7 +31,7 @@ CREATE TABLE price (
 CREATE TABLE comment (
     id SERIAL PRIMARY KEY,
     sku VARCHAR(50) NOT NULL,
-    username VARCHAR(100) NOT NULL,
+    username VARCHAR(100) ,
     comment_text TEXT,
     comment_date TEXT ,
     rating TEXT
