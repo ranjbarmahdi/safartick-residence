@@ -41,7 +41,42 @@ async function findAllMainLinks(page, initialUrl) {
         const $ = cheerio.load(html);
 
         // Getting All Main Urls In This Page
-        const mainLinks = ['https://www.jabama.com/province-mazandaran'];
+        const mainLinks = [
+            'https://www.jabama.com/province-east_azerbaijan',
+            'https://www.jabama.com/province-west_azerbaijan',
+            'https://www.jabama.com/province-ardabil',
+            'https://www.jabama.com/province-isfahan',
+            'https://www.jabama.com/province-alborz',
+            'https://www.jabama.com/province-ilam',
+            'https://www.jabama.com/province-boushehr',
+            'https://www.jabama.com/stays-tehran-inn',
+            'https://www.jabama.com/stays-tehran-suite',
+            'https://www.jabama.com/stays-tehran-apartment ',
+            'https://www.jabama.com/stays-tehran-hostel',
+            'https://www.jabama.com/province-chaharmahal_bakhtiari',
+            'https://www.jabama.com/province-south_khorasan',
+            'https://www.jabama.com/province-khorasan_razavi',
+            'https://www.jabama.com/province-north_khorasan',
+            'https://www.jabama.com/province-khuzestan',
+            'https://www.jabama.com/city-zanjan',
+            'https://www.jabama.com/province-semnan',
+            'https://www.jabama.com/province-sistan_balouchestan',
+            'https://www.jabama.com/province-fars',
+            'https://www.jabama.com/province-ghazvin',
+            'https://www.jabama.com/province-ghom',
+            'https://www.jabama.com/province-kurdistan',
+            'https://www.jabama.com/province-kerman',
+            'https://www.jabama.com/province-kermanshah',
+            'https://www.jabama.com/province-kohgiluyeh_boyer_ahmad',
+            'https://www.jabama.com/province-golestan',
+            'https://www.jabama.com/province-gilan',
+            'https://www.jabama.com/province-lorestan',
+            'https://www.jabama.com/province-mazandaran',
+            'https://www.jabama.com/province-markazi',
+            'https://www.jabama.com/province-hormozgan',
+            'https://www.jabama.com/province-hamedan',
+            'https://www.jabama.com/province-yazd',
+        ];
 
         // Push This Page Products Urls To allProductsLinks
         allMainLinks.push(...mainLinks);
@@ -69,6 +104,12 @@ async function findAllPagesLinks(page, mainLinks) {
             const $ = cheerio.load(html);
 
             // find last page number and preduce other pages urls
+            try {
+                await page.waitForSelector('.pagination > nav > a', { timeout: 120000 });
+            } catch (error) {
+                console.log('not found pagination');
+            }
+
             const paginationElement = $('.pagination');
             if (paginationElement.length) {
                 lsatPageNumber = Math.max(
@@ -80,6 +121,7 @@ async function findAllPagesLinks(page, mainLinks) {
                 if (lsatPageNumber > 312) {
                     lsatPageNumber = 312;
                 }
+                console.log('lsatPageNumber :', lsatPageNumber);
                 for (let j = 1; j <= lsatPageNumber; j++) {
                     const newUrl = url + `?page-number=${j}`;
                     allPagesLinks.push(newUrl);
