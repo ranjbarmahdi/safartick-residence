@@ -48,9 +48,9 @@ async function removeUrl() {
      `;
     try {
         const urlRow = await db.oneOrNone(existsQuery);
-        if (urlRow) {
-            await db.query(deleteQuery, [urlRow.id]);
-        }
+        // if (urlRow) {
+        //     await db.query(deleteQuery, [urlRow.id]);
+        // }
         return urlRow;
     } catch (error) {
         console.log('we have no url', error);
@@ -555,5 +555,5 @@ async function run_2(memoryUsagePercentage, cpuUsagePercentage, usageMemory) {
 
 // job.start()
 
-run_1(80, 80, 20);
-// run_2(80, 80, 20);
+// run_1(80, 80, 20);
+run_2(80, 80, 20);
