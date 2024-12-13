@@ -48,9 +48,9 @@ async function removeUrl() {
      `;
     try {
         const urlRow = await db.oneOrNone(existsQuery);
-        // if (urlRow) {
-        //     await db.query(deleteQuery, [urlRow.id]);
-        // }
+        if (urlRow) {
+            await db.query(deleteQuery, [urlRow.id]);
+        }
         return urlRow;
     } catch (error) {
         console.log('we have no url', error);
