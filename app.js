@@ -7,6 +7,8 @@ const {
     convertToEnglishNumber,
     persionMonthToDigit,
     click,
+    scrollModal,
+    scrollToEnd,
 } = require('./utils');
 const omitEmpty = require('omit-empty');
 const { v4: uuidv4 } = require('uuid');
@@ -106,8 +108,8 @@ async function insertUrlToVisited(url) {
 // ============================================ insertResidence
 async function insertResidence(queryValues) {
     const query = `
-          insert into residence ("sku", "url", "name", "city", "province", "description", "facilities", "capacity", "room_count", "amenities", "rules", "host_name", "contact_number")
-          values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);`;
+          insert into residence ("sku", "url", "name", "city", "province", "description", "facilities", "capacity", "room_count", "amenities", "rules", "host_name", "contact_number", "average_rating")
+          values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);`;
 
     try {
         const result = await db.oneOrNone(query, queryValues);
@@ -331,6 +333,42 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
 
         data['calendar'] = calendar;
 
+        // Average Rating
+        const average_rating = {};
+
+        $('.accommodation-detailed-rate__item > div > div').map((i, e) => {
+            const title = $(e)
+                .find('> .accommodation-badge-rate-info > .accommodation-badge-rate-info__title')
+                .text()
+                ?.trim();
+            const value = $(e)
+                .find('> .accommodation-badge-rate__score')
+                .text()
+                ?.replace('/5', '')
+                ?.trim();
+            average_rating[title] = value;
+            return `${title}:${value}`;
+        });
+
+        const totalRate =
+            $('h2.accommodation-overall-rate__title')
+                .text()
+                ?.replace('امتیاز', '')
+                ?.replace('کلی', '')
+                ?.replace('اقامتگاه', '')
+                ?.replace('از', '')
+                ?.replace('۵', '')
+                ?.trim() || null;
+
+        if (totalRate) {
+            average_rating['امتیاز کلی'] = totalRate;
+        }
+
+        data['average_rating'] =
+            Object.keys(average_rating)
+                .map((key) => `${key}:${average_rating[key]}`)
+                .join('\n') || null;
+
         // Comments
         const comments = [];
         $('.accommodation-abstract-comments > li > .comment-card').map((i, e) => {
@@ -453,7 +491,6 @@ async function main() {
 
             // if exists ResidenceInfo insert it to Residences
             if (residenceInfo) {
-                console.log('Insert Residence');
                 await insertResidence(insertQueryInput);
                 await insertUrlToVisited(urlRow?.url);
 
@@ -487,6 +524,7 @@ async function main() {
     } finally {
         // Close page and browser
         console.timeEnd('Execution Time');
+        console.log('End');
         if (page) await page.close();
         if (browser) await browser.close();
     }
