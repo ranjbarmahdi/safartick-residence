@@ -50,9 +50,9 @@ async function removeUrl() {
      `;
     try {
         const urlRow = await db.oneOrNone(existsQuery);
-        // if (urlRow) {
-        //     await db.query(deleteQuery, [urlRow.id]);
-        // }
+        if (urlRow) {
+            await db.query(deleteQuery, [urlRow.id]);
+        }
         return urlRow;
     } catch (error) {
         console.log('we have no url', error);
@@ -443,6 +443,7 @@ async function main() {
     let urlRow;
     let browser;
     let page;
+    console.time('Execution Time');
     try {
         const DATA_DIR = path.normalize(__dirname + `/${process.env.DIRECTORY_NAME}`);
         const IMAGES_DIR = path.normalize(DATA_DIR + '/images');
@@ -487,6 +488,7 @@ async function main() {
                 residenceInfo.rules,
                 residenceInfo.host_name,
                 residenceInfo.contact_number,
+                residenceInfo.average_rating,
             ];
 
             // if exists ResidenceInfo insert it to Residences
