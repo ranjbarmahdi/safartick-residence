@@ -48,9 +48,9 @@ async function removeUrl() {
      `;
     try {
         const urlRow = await db.oneOrNone(existsQuery);
-        if (urlRow) {
-            await db.query(deleteQuery, [urlRow.id]);
-        }
+        // if (urlRow) {
+        //     await db.query(deleteQuery, [urlRow.id]);
+        // }
         return urlRow;
     } catch (error) {
         console.log('we have no url', error);
@@ -388,6 +388,8 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
 
         imageUrls = imageUrls.flat();
         imageUrls = [...new Set(imageUrls)];
+
+        console.log('Download Images');
         await downloadImages(imageUrls, imagesDIR, data.sku);
 
         return data;
@@ -451,6 +453,7 @@ async function main() {
 
             // if exists ResidenceInfo insert it to Residences
             if (residenceInfo) {
+                console.log('Insert Residence');
                 await insertResidence(insertQueryInput);
                 await insertUrlToVisited(urlRow?.url);
 
@@ -459,6 +462,7 @@ async function main() {
                     insertPrice([residenceInfo.sku, residenceInfo.url, date, price, is_instant])
                 );
 
+                console.log('Insert Calendar');
                 await Promise.all(calendarPromises);
 
                 const comments = residenceInfo.comments;
@@ -473,6 +477,7 @@ async function main() {
                         ])
                 );
 
+                console.log('Insert Comments');
                 await Promise.all(commentsPromises);
             }
         }
@@ -481,9 +486,7 @@ async function main() {
         await insertUrlToProblem(urlRow?.url);
     } finally {
         // Close page and browser
-        const result = (new Date() - start) / 6000;
-        console.log(result);
-        console.log('End');
+        console.timeEnd('Execution Time');
         if (page) await page.close();
         if (browser) await browser.close();
     }
