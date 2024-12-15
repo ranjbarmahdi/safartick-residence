@@ -1,5 +1,12 @@
 const cheerio = require('cheerio');
-const { getBrowser, getRandomElement, shuffleArray, delay, isNumeric } = require('./utils');
+const {
+    getBrowser,
+    getRandomElement,
+    shuffleArray,
+    delay,
+    isNumeric,
+    convertToEnglishNumber,
+} = require('./utils');
 const db = require('./config.js');
 
 // ============================================ insertUrl
@@ -41,10 +48,42 @@ async function findAllMainLinks(page, initialUrl) {
         const $ = cheerio.load(html);
 
         // Getting All Main Urls In This Page
-        const mainLinks = [];
+        const mainLinks = [
+            'https://www.mihmansho.com/property/azs',
+            'https://www.mihmansho.com/property/azg',
+            'https://www.mihmansho.com/property/ard',
+            'https://www.mihmansho.com/property/esf',
+            'https://www.mihmansho.com/property/alb',
+            'https://www.mihmansho.com/property/ilm',
+            'https://www.mihmansho.com/property/bus',
+            'https://www.mihmansho.com/property/teh',
+            'https://www.mihmansho.com/property/cha',
+            'https://www.mihmansho.com/property/khj',
+            'https://www.mihmansho.com/property/khr',
+            'https://www.mihmansho.com/property/khs',
+            'https://www.mihmansho.com/property/khz',
+            'https://www.mihmansho.com/property/zan',
+            'https://www.mihmansho.com/property/sem',
+            'https://www.mihmansho.com/property/sis',
+            'https://www.mihmansho.com/property/frs',
+            'https://www.mihmansho.com/property/qaz',
+            'https://www.mihmansho.com/property/qom',
+            'https://www.mihmansho.com/property/kur',
+            'https://www.mihmansho.com/property/ker',
+            'https://www.mihmansho.com/property/krs',
+            'https://www.mihmansho.com/property/koh',
+            'https://www.mihmansho.com/property/gol',
+            'https://www.mihmansho.com/property/gil',
+            'https://www.mihmansho.com/property/lor',
+            'https://www.mihmansho.com/property/maz',
+            'https://www.mihmansho.com/property/mar',
+            'https://www.mihmansho.com/property/hor',
+            'https://www.mihmansho.com/property/ham',
+            'https://www.mihmansho.com/property/yaz',
+        ];
 
         // Push This Page Products Urls To allProductsLinks
-        allMainLinks.push(initialUrl);
+        allMainLinks.push(...mainLinks);
     } catch (error) {
         console.log('Error In findAllMainLinks function', error.message);
     }
@@ -65,18 +104,28 @@ async function findAllPagesLinks(page, mainLinks) {
             await page.goto(url, { timeout: 360000 });
 
             await delay(5000);
+
+            try {
+                await page.waitForSelector('ul.pagination', { timeout: 10000 });
+                console.log('Selector found!');
+            } catch (error) {
+                console.error('Selector not found or an error occurred:', error);
+            }
+
             const html = await page.content();
             const $ = cheerio.load(html);
 
             // find last page number and preduce other pages urls
-            const paginationElement = $('#plpCards > div.w-full.flex.justify-center > div > a');
+            const paginationElement = $('ul.pagination > li');
             if (paginationElement.length) {
                 lsatPageNumber = Math.max(
-                    ...$('#plpCards > div.w-full.flex.justify-center > div > a')
-                        .filter((i, e) => isNumeric($(e).text().trim()))
-                        .map((i, e) => Number($(e).text().trim()))
+                    ...$('ul.pagination > li')
+                        .map((i, e) => convertToEnglishNumber($(e).text().trim()))
                         .get()
+                        .filter((item) => isNumeric(item))
+                        .map((item) => Number(item))
                 );
+                console.log('lsatPageNumber :', lsatPageNumber);
                 for (let j = 1; j <= lsatPageNumber; j++) {
                     const newUrl = url + `?page=${j}`;
                     allPagesLinks.push(newUrl);
@@ -114,12 +163,22 @@ async function findAllProductsLinks(page, allPagesLinks) {
             do {
                 c++;
                 console.log(c);
+
+                try {
+                    await page.waitForSelector('#result-list > li > div.box .right-p > a', {
+                        timeout: 10000,
+                    });
+                    console.log('Selector found!');
+                } catch (error) {
+                    console.error('Selector not found or an error occurred:', error);
+                }
+
                 const html = await page.content();
                 const $ = cheerio.load(html);
 
                 // Getting All Products Urls In This Page
-                const productsUrls = $('article.RoomCard_container__NQ3TR > a')
-                    .map((i, e) => 'https://www.otaghak.com' + $(e).attr('href'))
+                const productsUrls = $('#result-list > li > div.box .right-p > a:first-child')
+                    .map((i, e) => 'https://www.mihmansho.com' + $(e).attr('href'))
                     .get();
 
                 // insert prooduct links to unvisited
@@ -149,7 +208,7 @@ async function findAllProductsLinks(page, allPagesLinks) {
 // ============================================ Main
 async function main() {
     try {
-        const INITIAL_PAGE_URL = ['https://www.otaghak.com/landing/search/'];
+        const INITIAL_PAGE_URL = ['https://www.mihmansho.com/'];
 
         // get random proxy
         const proxyList = [''];

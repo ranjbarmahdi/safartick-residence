@@ -205,31 +205,31 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
 
         data['name'] = $('h1').text().trim() ? $('h1').text().trim() : null;
 
-        data['city'] = data['name']?.split('،')[1]?.replace('در', '')?.trim() || null;
+        data['city'] = $('div.box-title .fourty-space > a:first').text()?.trim() || null;
 
-        data['province'] = null;
+        data['province'] = $('div.box-title .fourty-space > a:last').text()?.trim() || null;
 
         data['description'] =
-            $('#RoomDescription > span')
+            $('#details-f')
                 .map((i, e) => $(e).text()?.trim())
                 .get()
                 .join('\n') || null;
 
         const facilities = {};
         data['facilities'] =
-            $('#AboutRoom > div')
+            $('.features-home.fsf > div > div')
                 .map((i, e) => {
-                    const title = $(e).find('div > h3').text()?.trim();
-                    const ambients = $(e)
-                        .find('div > span')
-                        .map((i, e) => $(e).text()?.trim())
-                        .get()
-                        .join('\n');
+                    const title = $(e).text().split(':')[0]?.trim();
+                    const ambients = $(e).text().split(':')[1]?.trim();
                     facilities[title] = ambients;
                     return `${title}:\n${ambients}`;
                 })
                 .get()
                 .join('\n\n') || null;
+
+        if ('کد اقامتگاه' in facilities) {
+            delete facilities['کد اقامتگاه'];
+        }
 
         data['capacity'] = facilities['ظرفیت اقامتگاه'] || null;
 
@@ -268,50 +268,59 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
         html = await page.content();
         $ = cheerio.load(html);
 
-        data['rules'] =
-            $('#RoomRules, #RoomHostRule')
-                .find('div > span')
+        const rules = {};
+        const hostRules =
+            $('li.rules:not(.hidden) > span')
                 .map((i, e) => $(e).text()?.trim())
                 .get()
                 .join('\n') || null;
+        if (hostRules) {
+            rules['قوانین میزبان'] = hostRules;
+        }
 
-        data['host_name'] = $('#HostProfile > div > div > h3').text().trim()
-            ? $('#HostProfile > div > div > h3').text().trim()
-            : null;
+        const cancelRules =
+            $('.cancel-rule-list > li')
+                .map((i, e) => $(e).text()?.trim())
+                .get()
+                .join('\n') || null;
+        if (cancelRules) {
+            rules['قوانین کنسلی'] = cancelRules;
+        }
+
+        data['rules'] =
+            Object.keys(rules)
+                .map((key) => `${key}:\n${rules[key]}`)
+                .join('\n\n') || null;
+
+        data['host_name'] =
+            $('#about-host > .user-profile .user-profile-name > a').text().trim() || null;
 
         data['contact_number'] = $('selector').text().trim() ? $('selector').text().trim() : null;
 
         // Calendar
         const calendar = [];
-        $('.Calendar_container__AQwuE > div').map((i, e) => {
-            let month = $(e).find('div:first > h4:first').text()?.trim();
-            let year = $(e).find('div:first > h4:last').text()?.trim();
+        $('.cal-item').map((i, e) => {
+            let month = $(e).find('> .month-name').text().split(' ')[0]?.trim();
+            let year = $(e).find('> .month-name').text().split(' ')[1]?.trim();
             const monthDigit = persionMonthToDigit(month);
             const yearDigit = convertToEnglishNumber(year);
             const reservable = $(e)
-                .find(
-                    '>div:last > div:not(.Day_block__CkEZ4,.Day_hafDay__86Xu5,.Day_reserved__9_Jnt)'
-                )
+                .find('td[class]:not(.date-passed, .unavailable, .next-month, .prev-month)')
                 .map((i, e) => {
-                    const day = convertToEnglishNumber(
-                        $(e).find('.Day_title__Lil75').text()?.trim()
-                    );
+                    const day = convertToEnglishNumber($(e).attr('data-day')?.trim());
+
+                    const priceText = $(e).find('.price-text:first').text();
+                    const discountText = $(e).find('.price-text > del').text();
+                    const finalPriceText = priceText.replace(discountText, '')?.trim();
                     let price = convertToEnglishNumber(
-                        $(e)
-                            .find('.Day_price__IWql3')
-                            .text()
-                            ?.replace(/[^\u06F0-\u06F90-9]/g, '')
-                            ?.trim()
+                        $(e).find('.price-text:first').attr('data-price')
                     );
-                    if (price) {
-                        price *= 1000;
-                    }
+                    // if (price) {
+                    //     price *= 1000;
+                    // }
                     const date = `${yearDigit}\/${monthDigit}\/${day}`;
                     const available = true;
-                    let is_instant = false;
-                    if ($(e).find('img').length) {
-                        is_instant = true;
-                    }
+                    let is_instant = $(e).hasClass('reserveReady');
                     calendar.push({ date, price, available, is_instant });
                 });
         });
