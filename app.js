@@ -7,6 +7,7 @@ const {
     convertToEnglishNumber,
     persionMonthToDigit,
     click,
+    scrollModals,
 } = require('./utils');
 const omitEmpty = require('omit-empty');
 const { v4: uuidv4 } = require('uuid');
@@ -48,9 +49,9 @@ async function removeUrl() {
      `;
     try {
         const urlRow = await db.oneOrNone(existsQuery);
-        // if (urlRow) {
-        //     await db.query(deleteQuery, [urlRow.id]);
-        // }
+        if (urlRow) {
+            await db.query(deleteQuery, [urlRow.id]);
+        }
         return urlRow;
     } catch (error) {
         console.log('we have no url', error);
@@ -190,7 +191,7 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
         start = new Date();
 
         // Go To Url
-        await page.goto(residenceURL, { timeout: 180000 });
+        await page.goto('https://www.mihmansho.com/room/46745', { timeout: 180000 });
 
         await delay(5000);
 
@@ -340,39 +341,29 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
         await click(page, '#comments a.btn-more-comment');
         await delay(3000);
 
+        await scrollModals(page, '.comment-result', 100, 100);
+
         html = await page.content();
         $ = cheerio.load(html);
 
         const comments = [];
-        $(
-            '.Modal_content__j50DE > div > .RoomComments_ModalComments__sUK1a > .RoomComments_commentContainer__ouzGE'
-        ).map((i, e) => {
+        $('.comment-result > .comment-data-list > .guest-review').map((i, e) => {
             const username =
                 $(e)
-                    .find(
-                        '.RoomComments_profileSection__TF6d0 > .RoomComments_profile__G1Ueg > div > .Typography_subtitle3__CujCe '
-                    )
+                    .find('.author-name > .NameAndDate > .pull-left > div > .name')
                     .text()
                     ?.trim() || null;
 
-            let rating =
-                $(e)
-                    .find(
-                        '.RoomComments_profileSection__TF6d0 > .RoomComments_rate__Ko6e0 > .Typography_subtitle3__CujCe'
-                    )
-                    .text()
-                    ?.trim() || null;
+            let rating = $(e).find('selector').text()?.trim() || null;
 
             let comment_date =
                 $(e)
-                    .find(
-                        '.RoomComments_profileSection__TF6d0 > .RoomComments_profile__G1Ueg > div > .Typography_body3__qkN_x '
-                    )
+                    .find('.author-name > .NameAndDate > .pull-left > div > .date')
                     .text()
                     ?.trim() || null;
 
             const comment_text = $(e)
-                .find('.RoomComments_commentBody__qyP21 > span')
+                .find('.comment-container > .comment-content > p')
                 .filter((i, e) => $(e).text()?.trim())
                 .map((i, e) => $(e).text()?.trim())
                 .get()
@@ -385,8 +376,14 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
         // Download Images
         // const image_xpaths = ['//*[@id="Images"]//div[contains(@class, "Images_master__a6x_z")]'];
 
-        let imageUrls = $('#Images > .Images_master__a6x_z:not(.Images_tagsView__doiGA) > img')
-            .map((i, e) => $(e).attr('src')?.replace('X500', 'Medium')?.trim())
+        let imageUrls = $('img.gallery-img')
+            .map((i, e) => {
+                const src = $(e).attr('src'); // Get the current 'src' attribute of the image
+                return src
+                    ?.replace(/products\/\d+/, 'products/1024')
+                    .replace(/_\d+\.jpg/, '_1024.jpg')
+                    ?.trim();
+            })
             .get();
 
         imageUrls = imageUrls.flat();

@@ -116,6 +116,43 @@ async function scrollToEnd(page) {
     });
 }
 
+//============================================ scrollModal
+const scrollModals = async (page, modalSelector, scrollAmount = 1, waitTime = 20) => {
+    const modals = await page.$$(modalSelector); // Use $$ to get all matching elements
+    if (modals.length === 0) {
+        console.error(`No modals found with selector "${modalSelector}"`);
+        return;
+    }
+
+    for (const modal of modals) {
+        await page.evaluate(
+            async (modalElement, scrollAmount, waitTime) => {
+                await new Promise((resolve) => {
+                    let totalScrolled = 0;
+                    const scrollInterval = setInterval(() => {
+                        const { scrollTop, scrollHeight, clientHeight } = modalElement;
+
+                        // Scroll the modal by the specified amount
+                        modalElement.scrollBy(0, scrollAmount);
+                        totalScrolled += scrollAmount;
+
+                        // Stop scrolling if the bottom of the modal is reached
+                        if (scrollTop + clientHeight >= scrollHeight) {
+                            clearInterval(scrollInterval);
+                            resolve();
+                        }
+                    }, waitTime); // Wait between scrolls
+                });
+            },
+            modal,
+            scrollAmount,
+            waitTime
+        );
+    }
+
+    console.log('Scrolling completed modal.');
+};
+
 //============================================ choose a random element from an array
 const getRandomElement = (array) => {
     const randomIndex = Math.floor(Math.random() * array.length);
@@ -305,4 +342,5 @@ module.exports = {
     persionMonthToDigit,
     click,
     isNumeric,
+    scrollModals,
 };
