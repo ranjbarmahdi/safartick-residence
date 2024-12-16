@@ -191,7 +191,7 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
         start = new Date();
 
         // Go To Url
-        await page.goto('https://www.mihmansho.com/room/46745', { timeout: 180000 });
+        await page.goto(residenceURL, { timeout: 180000 });
 
         await delay(5000);
 
