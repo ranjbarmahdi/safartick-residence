@@ -48,9 +48,9 @@ async function removeUrl() {
      `;
     try {
         const urlRow = await db.oneOrNone(existsQuery);
-        if (urlRow) {
-            await db.query(deleteQuery, [urlRow.id]);
-        }
+        // if (urlRow) {
+        //     await db.query(deleteQuery, [urlRow.id]);
+        // }
         return urlRow;
     } catch (error) {
         console.log('we have no url', error);
@@ -231,42 +231,31 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
             delete facilities['کد اقامتگاه'];
         }
 
-        data['capacity'] = facilities['ظرفیت اقامتگاه'] || null;
+        data['capacity'] = facilities['حداکثر ظرفیت'] || null;
 
-        data['room_count'] = facilities['سرویس خواب'] || null;
-
-        await click(page, '#TopAttributes  button');
-        await delay(3000);
-
-        html = await page.content();
-        $ = cheerio.load(html);
+        data['room_count'] = facilities['تعداد اتاق'] || null;
 
         const amenities = {};
         data['amenities'] =
-            $('.Modal_content__j50DE > .Modal_divider__mFcfa > div > div')
+            $('.amenities > li.features')
                 .map((i, e) => {
-                    const title = $(e)
-                        .find('.AttributeModal_mainAttrTitle__6bRDm > h4')
-                        .text()
-                        ?.trim();
-                    const ambients = $(e)
-                        .find(
-                            '.AttributeModal_subAttrContainer__9g_xk > .AttributeModal_subTitleAttrContainer__XlhJV > p'
-                        )
-                        .map((i, e) => $(e).text()?.trim())
-                        .get()
-                        .join('\n');
+                    const title = $(e).find('> span > span.feature-attribute-name').text()?.trim();
+
+                    const hasntThisFeature = $(e).find('> span:first').hasClass('not-active-f');
+
+                    const ambients = hasntThisFeature
+                        ? 'ندارد'
+                        : $(e)
+                              .find('.feature-description')
+                              .map((i, e) => $(e).text()?.trim())
+                              .get()
+                              .join('\n') || 'دارد';
+
                     amenities[title] = ambients;
                     return `${title}:\n${ambients}`;
                 })
                 .get()
                 .join('\n\n') || null;
-
-        await click(page, '.Modal_content__j50DE button');
-        await delay(1000);
-
-        html = await page.content();
-        $ = cheerio.load(html);
 
         const rules = {};
         const hostRules =
@@ -274,6 +263,7 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
                 .map((i, e) => $(e).text()?.trim())
                 .get()
                 .join('\n') || null;
+
         if (hostRules) {
             rules['قوانین میزبان'] = hostRules;
         }
@@ -329,16 +319,15 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
 
         // Comments
         const average_rating = {};
-        if ($('#RoomComments > .RoomComments_title__Yz6QI > h4').length) {
-            average_rating['امتیاز کلی'] = $('#RoomComments > .RoomComments_title__Yz6QI > h4')
+        if ($('#secondary .details .rated-top .rate-val:first').length) {
+            average_rating['امتیاز کلی'] = $('#secondary .details .rated-top .rate-val:first')
                 .text()
-                ?.replace('امتیاز', '')
                 ?.trim();
         }
 
-        $('#RoomComments > .Rate_container__t_gwt > .Rate_section__M2go5').map((i, e) => {
-            const title = $(e).find('>p').text()?.trim();
-            const value = $(e).find('>.Rate_ratePoint___bDN8 > h4').text()?.trim();
+        $('#comments .rates > div').map((i, e) => {
+            const title = $(e).find('.rate-label:last').text()?.trim();
+            const value = $(e).find('.rate-val:last').text()?.trim();
             average_rating[title] = value;
             return `${title}:${value}`;
         });
@@ -348,7 +337,7 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
                 .map((key) => `${key}:${average_rating[key]}`)
                 .join('\n') || null;
 
-        await click(page, '#RoomComments > div > button');
+        await click(page, '#comments a.btn-more-comment');
         await delay(3000);
 
         html = await page.content();
