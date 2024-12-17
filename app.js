@@ -208,8 +208,18 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
 
         await scrollToEnd(page);
 
+        try {
+            await page.waitForSelector('#images > .rtl-mui-ecpffk img', { timeout: 5000 });
+        } catch (error) {
+            console.log('Images Selector Not Found.');
+        }
+
         let html = await page.content();
         let $ = cheerio.load(html);
+
+        let imageUrls = $('#images > .rtl-mui-ecpffk img')
+            .map((i, e) => $(e).attr('src')?.trim())
+            .get();
 
         const data = {};
 
@@ -327,6 +337,9 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
             //
         }
 
+        html = await page.content();
+        $ = cheerio.load(html);
+
         const calendar = [];
         $('.calendar-wrapper > .calendar-days-container > .days-container').map((i, e) => {
             const yearAndMonthElements = $('.rtl-mui-1t6c6c4 > div')[i];
@@ -427,16 +440,6 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
         });
 
         data['comments'] = comments;
-
-        try {
-            await page.waitForSelector('#images > .rtl-mui-ecpffk img', { timeout: 5000 });
-        } catch (error) {
-            console.log('Images Selector Not Found.');
-        }
-
-        let imageUrls = $('#images > .rtl-mui-ecpffk img')
-            .map((i, e) => $(e).attr('src')?.trim())
-            .get();
 
         imageUrls = imageUrls.flat();
         imageUrls = [...new Set(imageUrls)];
