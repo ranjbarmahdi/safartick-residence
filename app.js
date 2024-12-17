@@ -221,8 +221,6 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
             .map((i, e) => $(e).attr('src')?.trim())
             .get();
 
-        console.log({ imageUrls });
-
         const data = {};
 
         data['sku'] = uuidv4().replace(/-/g, '');
@@ -620,5 +618,5 @@ async function run_2(memoryUsagePercentage, cpuUsagePercentage, usageMemory) {
 
 // job.start()
 
-run_1(80, 80, 20);
-// run_2(80, 80, 20);
+// run_1(80, 80, 20);
+run_2(80, 80, 20);
