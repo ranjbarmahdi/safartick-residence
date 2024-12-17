@@ -398,46 +398,79 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
                 .map((key) => `${key}:${average_rating[key]}`)
                 .join('\n') || null;
 
-        await click(page, '.ReviewsContainer_show-all-reviews__LJ4dt > button');
-        await delay(3000);
-
-        await scrollModal(
-            page,
-            '.Modal_modal-content__8hZOw > .ReviewsModal_reviews-modal___EoTg > .ReviewsModal_review-modal-main-container__dyu4D > .ReviewsModal_reviews-items-container__tvl87 > .infinite-scroll-component__outerdiv > .ReviewsModal_reviews-list-wrapper__gG3yf',
-            100,
-            100
-        );
-
-        html = await page.content();
-        $ = cheerio.load(html);
-
         const comments = [];
-        $('.infinite-scroll-component__outerdiv .rtl-mui-1rjsml5').map((i, e) => {
-            const username =
-                $(e)
-                    .find('>.user-information-wrapper > .user-review-info > .suggestion > span')
-                    .text()
-                    ?.trim() || null;
+        try {
+            await page.waitForSelector('.ReviewsContainer_show-all-reviews__LJ4dt > button', {
+                timeout: 5000,
+            });
 
-            let rating =
-                $(e).find(
-                    '>.user-information-wrapper > .user-review-info > .review-details-wrapper > .rate-box > .icon-star-Filled'
-                ).length +
+            await click(page, '.ReviewsContainer_show-all-reviews__LJ4dt > button');
+            await delay(3000);
+
+            await scrollModal(
+                page,
+                '.Modal_modal-content__8hZOw > .ReviewsModal_reviews-modal___EoTg > .ReviewsModal_review-modal-main-container__dyu4D > .ReviewsModal_reviews-items-container__tvl87 > .infinite-scroll-component__outerdiv > .ReviewsModal_reviews-list-wrapper__gG3yf',
+                100,
+                100
+            );
+
+            html = await page.content();
+            $ = cheerio.load(html);
+
+            $('.infinite-scroll-component__outerdiv .rtl-mui-1rjsml5').map((i, e) => {
+                const username =
+                    $(e)
+                        .find('>.user-information-wrapper > .user-review-info > .suggestion > span')
+                        .text()
+                        ?.trim() || null;
+
+                let rating =
                     $(e).find(
-                        '>.user-information-wrapper > .user-review-info > .review-details-wrapper > .rate-box > .icon-star-half-Filled'
-                    ).length /
-                        2 || null;
+                        '>.user-information-wrapper > .user-review-info > .review-details-wrapper > .rate-box > .icon-star-Filled'
+                    ).length +
+                        $(e).find(
+                            '>.user-information-wrapper > .user-review-info > .review-details-wrapper > .rate-box > .icon-star-half-Filled'
+                        ).length /
+                            2 || null;
 
-            let comment_date = $(e).find('NotFound').text()?.trim() || null;
+                let comment_date = $(e).find('.review-details-date:first').text()?.trim() || null;
 
-            const comment_text = $(e)
-                .find('.positive-negative-container > div > .rtl-mui-3yuszo , .rtl-mui-1yfqltl')
-                .filter((i, e) => $(e).text()?.trim())
-                .map((i, e) => $(e).text()?.trim())
-                .get()
-                .join('\n');
-            comments.push({ username, rating, comment_date, comment_text });
-        });
+                const comment_text = $(e)
+                    .find('.positive-negative-container > div > .rtl-mui-3yuszo , .rtl-mui-1yfqltl')
+                    .filter((i, e) => $(e).text()?.trim())
+                    .map((i, e) => $(e).text()?.trim())
+                    .get()
+                    .join('\n');
+                comments.push({ username, rating, comment_date, comment_text });
+            });
+        } catch (error) {
+            html = await page.content();
+            $ = cheerio.load(html);
+
+            $(
+                '#comments .ReviewsContainer_review-preview-wrapper__JusJv > .reviewCard_review-card__28_fp'
+            ).map((i, e) => {
+                const username =
+                    $(e).find('.reviewCard_guest-name__6mA8E:first').text()?.trim() || null;
+
+                let rating =
+                    $(e).find('.reviewCard_rate-box__npx79 > .icon-star-Filled').length +
+                        $(e).find('.reviewCard_rate-box__npx79 > .icon-star-half-Filled').length /
+                            2 || null;
+
+                let comment_date =
+                    $(e).find('.reviewCard_review-details-date__fvkpa:first').text()?.trim() ||
+                    null;
+
+                const comment_text = $(e)
+                    .find('.reviewCard_review-description__gi5tf')
+                    .filter((i, e) => $(e).text()?.trim())
+                    .map((i, e) => $(e).text()?.trim())
+                    .get()
+                    .join('\n');
+                comments.push({ username, rating, comment_date, comment_text });
+            });
+        }
 
         data['comments'] = comments;
 
