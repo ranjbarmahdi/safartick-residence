@@ -318,6 +318,15 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
         data['contact_number'] = $('selector').text().trim() ? $('selector').text().trim() : null;
 
         // Calendar
+        try {
+            await page.waitForSelector(
+                '.calendar-wrapper > .calendar-days-container > .days-container',
+                { timeout: 5000 }
+            );
+        } catch (error) {
+            //
+        }
+
         const calendar = [];
         $('.calendar-wrapper > .calendar-days-container > .days-container').map((i, e) => {
             const yearAndMonthElements = $('.rtl-mui-1t6c6c4 > div')[i];
@@ -418,6 +427,12 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
         });
 
         data['comments'] = comments;
+
+        try {
+            await page.waitForSelector('#images > .rtl-mui-ecpffk img', { timeout: 5000 });
+        } catch (error) {
+            //
+        }
 
         let imageUrls = $('#images > .rtl-mui-ecpffk img')
             .map((i, e) => $(e).attr('src')?.trim())

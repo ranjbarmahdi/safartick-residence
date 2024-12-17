@@ -118,6 +118,12 @@ async function scrollToEnd(page) {
 
 //============================================ scrollModal
 const scrollModal = async (page, modalSelector, scrollAmount = 1, waitTime = 20) => {
+    try {
+        await page.waitForSelector(modalSelector, { timeout: 5000 }); // 5 seconds
+    } catch (error) {
+        //
+    }
+
     const modal = await page.$(modalSelector);
     if (!modal) {
         console.error(`Modal with selector "${modalSelector}" not found.`);
