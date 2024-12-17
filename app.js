@@ -221,6 +221,8 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
             .map((i, e) => $(e).attr('src')?.trim())
             .get();
 
+        console.log({ imageUrls });
+
         const data = {};
 
         data['sku'] = uuidv4().replace(/-/g, '');
