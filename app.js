@@ -431,7 +431,7 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
         try {
             await page.waitForSelector('#images > .rtl-mui-ecpffk img', { timeout: 5000 });
         } catch (error) {
-            //
+            console.log('Images Selector Not Found.');
         }
 
         let imageUrls = $('#images > .rtl-mui-ecpffk img')
