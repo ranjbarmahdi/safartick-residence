@@ -211,20 +211,11 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
         data['province'] =
             $('header div.CustomContainer > nav > ol > li > a:eq(1)').text()?.trim() || null;
 
-        await click(page, '.HouseAbout_house-about___KcbT .ShowMorePopUp_more__6nw5K > button');
-        await delay(3000);
-
-        html = await page.content();
-        $ = cheerio.load(html);
-
         data['description'] =
             $('#specifications > p')
                 .map((i, e) => $(e).text()?.trim())
                 .get()
                 .join('\n') || null;
-
-        html = await page.content();
-        $ = cheerio.load(html);
 
         const facilities = {};
         data['facilities'] =
@@ -311,20 +302,7 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
             const reservable = $(e)
                 .find('> div > div:last > div > div > div')
                 .filter(function () {
-                    const $el = $(this);
-                    // Exclude if cursor is 'not-allowed'
-                    if ($el.css('cursor') === 'not-allowed') {
-                        return false;
-                    }
-                    // Exclude if the background color matches reserved residences
-                    if ($el.css('background-color') === 'rgba(0, 211, 0, 0.15)') {
-                        return false;
-                    }
-                    // Exclude if specific classes indicating reserved residences exist
-                    if ($el.hasClass('!border-none') || $el.hasClass('!text-error-light')) {
-                        return false;
-                    }
-                    return true; // Include other residences
+                    return $(this).find('>*').length > 1;
                 })
                 .map((i, e) => {
                     const day = convertToEnglishNumber($(e).find('>div:first').text()?.trim());
@@ -336,8 +314,8 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
                             ?.trim()
                     );
                     const date = `${yearDigit}\/${monthDigit}\/${day}`;
-                    const available = true;
-                    let is_instant = false;
+                    const available = !($(e).css('cursor') === 'not-allowed');
+                    let is_instant = !!$(e).find('>div.rounded-full').length;
                     if ($(e).find('img').length) {
                         is_instant = true;
                     }
