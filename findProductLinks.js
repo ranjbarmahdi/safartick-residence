@@ -162,10 +162,11 @@ async function findAllProductsLinks(page, allPagesLinks) {
 
                 try {
                     await page.waitForSelector('h6.card-title > a', {
-                        timeout: 5000,
+                        timeout: 20000,
                     });
+                    console.log('URL selector found');
                 } catch (error) {
-                    //
+                    console.log('URL selector not found');
                 }
 
                 const html = await page.content();
