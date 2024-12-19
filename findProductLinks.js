@@ -1,6 +1,7 @@
 const cheerio = require('cheerio');
 const { getBrowser, getRandomElement, shuffleArray, delay, isNumeric } = require('./utils');
 const db = require('./config.js');
+const { timeout } = require('puppeteer');
 
 // ============================================ insertUrl
 async function insertUrl(url) {
@@ -41,10 +42,42 @@ async function findAllMainLinks(page, initialUrl) {
         const $ = cheerio.load(html);
 
         // Getting All Main Urls In This Page
-        const mainLinks = [];
+        const mainLinks = [
+            'https://anyja.ir/placesByProvince/1',
+            // 'https://anyja.ir/placesByProvince/2',
+            // 'https://anyja.ir/placesByProvince/3',
+            // 'https://anyja.ir/placesByProvince/4',
+            // 'https://anyja.ir/placesByProvince/5',
+            // 'https://anyja.ir/placesByProvince/6',
+            // 'https://anyja.ir/placesByProvince/7',
+            // 'https://anyja.ir/placesByProvince/8',
+            // 'https://anyja.ir/placesByProvince/9',
+            // 'https://anyja.ir/placesByProvince/10',
+            // 'https://anyja.ir/placesByProvince/11',
+            // 'https://anyja.ir/placesByProvince/12',
+            // 'https://anyja.ir/placesByProvince/13',
+            // 'https://anyja.ir/placesByProvince/14',
+            // 'https://anyja.ir/placesByProvince/15',
+            // 'https://anyja.ir/placesByProvince/16',
+            // 'https://anyja.ir/placesByProvince/17',
+            // 'https://anyja.ir/placesByProvince/18',
+            // 'https://anyja.ir/placesByProvince/19',
+            // 'https://anyja.ir/placesByProvince/20',
+            // 'https://anyja.ir/placesByProvince/21',
+            // 'https://anyja.ir/placesByProvince/22',
+            // 'https://anyja.ir/placesByProvince/23',
+            // 'https://anyja.ir/placesByProvince/24',
+            // 'https://anyja.ir/placesByProvince/25',
+            // 'https://anyja.ir/placesByProvince/26',
+            // 'https://anyja.ir/placesByProvince/27',
+            // 'https://anyja.ir/placesByProvince/28',
+            // 'https://anyja.ir/placesByProvince/29',
+            // 'https://anyja.ir/placesByProvince/30',
+            // 'https://anyja.ir/placesByProvince/31',
+        ];
 
         // Push This Page Products Urls To allProductsLinks
-        allMainLinks.push(initialUrl);
+        allMainLinks.push(...mainLinks);
     } catch (error) {
         console.log('Error In findAllMainLinks function', error.message);
     }
@@ -65,18 +98,30 @@ async function findAllPagesLinks(page, mainLinks) {
             await page.goto(url, { timeout: 360000 });
 
             await delay(5000);
+
+            try {
+                await page.waitForSelector('.pagination-ul > li > .pagination-link', {
+                    timeout: 5000,
+                });
+                console.log('pagination element find');
+            } catch (error) {
+                console.log('pagination element not find');
+            }
+
             const html = await page.content();
             const $ = cheerio.load(html);
 
             // find last page number and preduce other pages urls
-            const paginationElement = $('#plpCards > div.w-full.flex.justify-center > div > a');
+            const paginationElement = $('.pagination-ul > li > .pagination-link');
             if (paginationElement.length) {
                 lsatPageNumber = Math.max(
-                    ...$('#plpCards > div.w-full.flex.justify-center > div > a')
+                    ...$('.pagination-ul > li > .pagination-link')
                         .filter((i, e) => isNumeric($(e).text().trim()))
                         .map((i, e) => Number($(e).text().trim()))
                         .get()
                 );
+
+                console.log('lsatPageNumber :', lsatPageNumber);
                 for (let j = 1; j <= lsatPageNumber; j++) {
                     const newUrl = url + `?page=${j}`;
                     allPagesLinks.push(newUrl);
@@ -114,12 +159,21 @@ async function findAllProductsLinks(page, allPagesLinks) {
             do {
                 c++;
                 console.log(c);
+
+                try {
+                    await page.waitForSelector('h6.card-title > a', {
+                        timeout: 5000,
+                    });
+                } catch (error) {
+                    //
+                }
+
                 const html = await page.content();
                 const $ = cheerio.load(html);
 
                 // Getting All Products Urls In This Page
-                const productsUrls = $('article.RoomCard_container__NQ3TR > a')
-                    .map((i, e) => 'https://www.otaghak.com' + $(e).attr('href'))
+                const productsUrls = $('h6.card-title > a')
+                    .map((i, e) => $(e).attr('href'))
                     .get();
 
                 // insert prooduct links to unvisited
@@ -149,7 +203,7 @@ async function findAllProductsLinks(page, allPagesLinks) {
 // ============================================ Main
 async function main() {
     try {
-        const INITIAL_PAGE_URL = ['https://www.otaghak.com/landing/search/'];
+        const INITIAL_PAGE_URL = ['https://anyja.ir'];
 
         // get random proxy
         const proxyList = [''];
