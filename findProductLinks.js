@@ -49,7 +49,7 @@ async function findAllMainLinks(page, initialUrl) {
             'https://www.homsa.net/province-alborz',
             'https://www.homsa.net/province-ilam',
             'https://www.homsa.net/province-bushehr',
-            // 'https://www.homsa.net/province-tehran',
+            'https://www.homsa.net/province-tehran',
             'https://www.homsa.net/province-chaharmahal-and-bakhtiari',
             'https://www.homsa.net/province-south-khorasan',
             'https://www.homsa.net/province-razavi-khorasan',
@@ -66,9 +66,9 @@ async function findAllMainLinks(page, initialUrl) {
             'https://www.homsa.net/province-kermanshah',
             'https://www.homsa.net/province-kohgiluyeh-and-boyer-ahmad',
             'https://www.homsa.net/province-golestan',
-            // 'https://www.homsa.net/province-gilan',
+            'https://www.homsa.net/province-gilan',
             'https://www.homsa.net/province-lorestan',
-            // 'https://www.homsa.net/province-mazandaran',
+            'https://www.homsa.net/province-mazandaran',
             'https://www.homsa.net/province-markazi',
             'https://www.homsa.net/province-hormozgan',
             'https://www.homsa.net/province-hamedan',
@@ -172,7 +172,7 @@ async function findAllProductsLinks(page, allPagesLinks) {
                 await page.waitForSelector('a.room-card-link', { timeout: 20000 });
                 console.log('Selector found!');
             } catch (error) {
-                console.error('Selector not found or an error occurred:', error);
+                console.error('Selector not found or an error occurred');
             }
 
             let nextPageBtn;
