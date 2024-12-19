@@ -41,14 +41,10 @@ async function findAllMainLinks(page, initialUrl) {
         const $ = cheerio.load(html);
 
         // Getting All Main Urls In This Page
-        const mainLinks = [
-            'https://www.homsa.net/province-tehran',
-            'https://www.homsa.net/province-mazandaran',
-            'https://www.homsa.net/province-gilan',
-        ];
+        const mainLinks = [];
 
         // Push This Page Products Urls To allProductsLinks
-        allMainLinks.push(...mainLinks);
+        allMainLinks.push(initialUrl);
     } catch (error) {
         console.log('Error In findAllMainLinks function', error.message);
     }
@@ -69,7 +65,9 @@ async function findAllPagesLinks(page, mainLinks) {
             await page.goto(url, { timeout: 360000 });
 
             try {
-                await page.waitForSelector('p.ng-binding', { timeout: 120000 });
+                await page.waitForSelector('.pagination_pagination-container__XURAR > li', {
+                    timeout: 10000,
+                });
             } catch (error) {
                 console.log('not found pagination');
             }
@@ -78,14 +76,15 @@ async function findAllPagesLinks(page, mainLinks) {
             const $ = cheerio.load(html);
 
             // find last page number and preduce other pages urls
-            const paginationElement = $('ul.MuiPagination-ul > li');
+            const paginationElement = $('.pagination_pagination-container__XURAR > li');
             if (paginationElement.length) {
                 let lsatPageNumber = Math.max(
-                    ...$('ul.MuiPagination-ul > li')
+                    ...$('.pagination_pagination-container__XURAR > li')
                         .filter((i, e) => isNumeric($(e).text().trim()))
                         .map((i, e) => Number($(e).text().trim()))
                         .get()
                 );
+                console.log('lsatPageNumber :', lsatPageNumber);
                 for (let j = 1; j <= lsatPageNumber; j++) {
                     const newUrl = url + `?page=${j}`;
                     allPagesLinks.push(newUrl);
@@ -117,10 +116,10 @@ async function findAllProductsLinks(page, allPagesLinks) {
             console.log('-------sleep 5 second');
 
             try {
-                await page.waitForSelector('a.room-card-link', { timeout: 20000 });
+                await page.waitForSelector('a[target="_blank"]', { timeout: 20000 });
                 console.log('Selector found!');
             } catch (error) {
-                console.error('Selector not found or an error occurred:', error);
+                console.error('Selector not found or an error occurred');
             }
 
             let nextPageBtn;
@@ -132,8 +131,8 @@ async function findAllProductsLinks(page, allPagesLinks) {
                 const $ = cheerio.load(html);
 
                 // Getting All Products Urls In This Page
-                const productsUrls = $('a.room-card-link')
-                    .map((i, e) => $(e).attr('href'))
+                const productsUrls = $('a[target="_blank"]')
+                    .map((i, e) => 'https://lidomatrip.com' + $(e).attr('href'))
                     .get();
 
                 // insert prooduct links to unvisited
@@ -163,7 +162,7 @@ async function findAllProductsLinks(page, allPagesLinks) {
 // ============================================ Main
 async function main() {
     try {
-        const INITIAL_PAGE_URL = ['https://www.homsa.net/'];
+        const INITIAL_PAGE_URL = ['https://lidomatrip.com/search'];
 
         // get random proxy
         const proxyList = [''];
