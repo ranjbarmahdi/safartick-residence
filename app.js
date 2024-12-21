@@ -219,7 +219,7 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
 
         const facilities = {};
         data['facilities'] =
-            $('section:contains(مشخصات کلی آپارتمان) > div')
+            $('section:contains(مشخصات کلی) > div')
                 .map((i, e) => {
                     const title = `مشخصات کلی آپارتمان`;
                     const ambients = $(e)
@@ -238,10 +238,16 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
                 .nextAll('span')
                 .map((i, e) => $(e).text()?.replace(/\s+/g, ' ')?.replace('+', ' ')?.trim())
                 .get()
-                .join(' + ') || null;
+                .join(' - ') || null;
 
         data['room_count'] = $('p:contains(اتاق خواب):last').text().trim() || null;
 
+
+        try {
+            await page.waitForSelector(,{timeout: 5000})
+        } catch (error) {
+            
+        }
         await click(
             page,
             '.HouseFeatures_house-features__f0cw5 .ShowMorePopUp_more__6nw5K > button'
