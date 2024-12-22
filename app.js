@@ -416,7 +416,7 @@ async function main() {
 
             // Lunch Browser
             await delay(Math.random() * 4000);
-            browser = await getBrowser(randomProxy, false, false);
+            browser = await getBrowser(randomProxy, true, false);
 
             // Create a new browser context with no notifications
             const context = await browser.createIncognitoBrowserContext();
