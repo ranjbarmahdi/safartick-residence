@@ -7,6 +7,7 @@ const {
     convertToEnglishNumber,
     persionMonthToDigit,
     click,
+    scrollToEnd,
 } = require('./utils');
 const omitEmpty = require('omit-empty');
 const { v4: uuidv4 } = require('uuid');
@@ -194,6 +195,8 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
 
         await delay(5000);
 
+        await scrollToEnd(page);
+
         let html = await page.content();
         let $ = cheerio.load(html);
 
@@ -221,7 +224,7 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
         data['facilities'] =
             $('section:contains(مشخصات کلی) > div')
                 .map((i, e) => {
-                    const title = `مشخصات کلی آپارتمان`;
+                    const title = `مشخصات کلی اقامتگاه`;
                     const ambients = $(e)
                         .find('>div>p')
                         .map((i, e) => $(e).text()?.trim())
@@ -242,28 +245,13 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
 
         data['room_count'] = $('p:contains(اتاق خواب):last').text().trim() || null;
 
-
-        try {
-            await page.waitForSelector(,{timeout: 5000})
-        } catch (error) {
-            
-        }
-        await click(
-            page,
-            '.HouseFeatures_house-features__f0cw5 .ShowMorePopUp_more__6nw5K > button'
-        );
-        await delay(3000);
-
-        html = await page.content();
-        $ = cheerio.load(html);
-
         const amenities = {};
         data['amenities'] =
-            $('header:contains(امکانات آپارتمان)')
+            $('header:contains(امکانات)')
                 .next('div')
                 .find('>ul')
                 .map((i, e) => {
-                    const title = `امکانات آپارتمان`;
+                    const title = `امکانات اقامتگاه`;
                     const ambients = $(e)
                         .find('>li')
                         .map((i, e) => $(e).text()?.trim())
@@ -275,21 +263,29 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
                 .get()
                 .join('\n\n') || null;
 
+        const rules = {};
+        rules['مقررات اقامتگاه'] = $('h3:contains(مقررات اقامتگاه)')
+            .next('div')
+            .find('div > p')
+            .map((i, e) => $(e).text()?.trim())
+            .get()
+            .join('\n');
+
+        rules['قوانین کنسلی'] = $('h3:contains(قوانین لغو)')
+            .next('div')
+            .find(' > div > div')
+            .map((i, e) => {
+                const title = $(e).find('>span:first').text().trim();
+                const ambients = $(e).find('>span:last').text().trim();
+                return `${title}: ${ambients}`;
+            })
+            .get()
+            .join('\n');
+
         data['rules'] =
-            $('#resRules > div > div > p')
-                .map((i, e) => $(e).text()?.trim())
-                .get()
-                .join('\n') +
-                $('#resRules')
-                    .next('div')
-                    .find('>div>div>div')
-                    .map((i, e) => {
-                        const title = $(e).find('>span:first').text()?.replace(/\s+/g, ' ')?.trim();
-                        const value = $(e).find('>span:last').text()?.replace(/\s+/g, ' ')?.trim();
-                        return `${title}:${value}`;
-                    })
-                    .get()
-                    .join('\n') || null;
+            Object.keys(rules)
+                .map((key) => `${key}:\n${rules[key]}`)
+                .join('\n\n') || null;
 
         data['host_name'] = $('#Host_Infographianno > header > div > h2').text()?.trim() || null;
 
@@ -350,12 +346,6 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
                 .join('\n') || null;
 
         const comments = [];
-        // try {
-        //     await page.waitForSelector('#resReviews > footer > button', { timeout: 5000 }); // Waits up to 60 seconds
-        //     await click(page, '#resReviews > footer > button');
-        //     await delay(3000);
-        // } catch (error) {}
-        // await delay(3000);
 
         $('#resReviews > div.Make_swiper_slide_width_auto_height_auto > div > div > div').map(
             (i, e) => {
@@ -472,7 +462,6 @@ async function main() {
                 console.log('Insert Prices');
                 const calendar = residenceInfo.calendar;
                 const calendarPromises = calendar.map(({ date, price, is_instant }) => {
-                    console.log([residenceInfo.sku, residenceInfo.url, date, price, is_instant]);
                     return insertPrice([
                         residenceInfo.sku,
                         residenceInfo.url,
@@ -569,5 +558,5 @@ async function run_2(memoryUsagePercentage, cpuUsagePercentage, usageMemory) {
 
 // job.start()
 
-run_1(80, 80, 20);
-// run_2(80, 80, 20);
+// run_1(80, 80, 20);
+run_2(80, 80, 20);
