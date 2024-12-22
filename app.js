@@ -49,9 +49,9 @@ async function removeUrl() {
      `;
     try {
         const urlRow = await db.oneOrNone(existsQuery);
-        if (urlRow) {
-            await db.query(deleteQuery, [urlRow.id]);
-        }
+        // if (urlRow) {
+        //     await db.query(deleteQuery, [urlRow.id]);
+        // }
         return urlRow;
     } catch (error) {
         console.log('we have no url', error);
@@ -196,17 +196,10 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
         await delay(5000);
 
         try {
-            await page.waitForSelector('.image-light-wide img', { timeout: 5000 });
+            await page.waitForSelector('.residence-image a', { timeout: 5000 });
             console.log('Images selector find');
         } catch (error) {
             console.log('Images selector not find');
-        }
-
-        try {
-            await page.waitForSelector('#default_comment > div:last-child', { timeout: 5000 });
-            console.log('default comment selector find');
-        } catch (error) {
-            console.log('default comment not find');
         }
 
         let html = await page.content();
@@ -220,75 +213,29 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
 
         data['name'] = $('h1').text().trim() || null;
 
-        data['city'] =
-            $('body > main > div > div > div > div > div > div > div > ul > li:nth-child(2)')
-                .text()
-                .trim() || null;
+        data['city'] = $('p.location').text().split(',')[1].trim();
 
-        data['province'] =
-            $('body > main > div > div > div > div > div > div > div > ul > li:nth-child(1)')
-                .text()
-                .trim() || null;
+        data['province'] = $('p.location').text().split(',')[0].trim();
 
-        data['description'] =
-            $('#about > div > p')
-                .text()
-                .replaceAll('\n', '')
-                .replace(/s+/g, ' ')
-                .split(' ')
-                .filter((w) => w.trim())
-                .join(' ')
-                ?.replace('اجاره', '')
-                ?.replace(data['name'], '')
-                .trim() +
-                '\n' +
-                $('#about > div > pre').text().trim() || null;
-
-        const facilities = {};
-        facilities['درباره بنا'] = $('#information div:contains(درباره بنا):last')
-            .parent()
-            .find('> div.d-flex')
-            .map((i, e) => {
-                const k = $(e).find('> span:first').text().trim();
-                const v = $(e).find('> span:last').text().trim();
-                return `${k} ${v}`;
-            })
-            .get()
-            .join('\n');
-
-        facilities['ظرفیت'] = $('#information div:contains(ظرفیت):last')
-            .parent()
-            .find('> div.d-flex')
-            .map((i, e) => {
-                const k = $(e).find('> span:first').text().trim();
-                const v = $(e).find('> span:last').text().trim();
-                return `${k} ${v}`;
-            })
-            .get()
-            .join('\n');
-
-        facilities['سرویس خواب'] = $('#information div:contains(سرویس خواب):last')
-            .parent()
-            .nextAll('div.col-sm-6.col-12')
-            .find('> div.d-flex')
-            .map((i, e) => {
-                const k = $(e).find('> span:first').text().trim();
-                const v = $(e).find('> span:last').text().trim();
-                return `${k} ${v}`;
-            })
-            .get()
-            .join('\n');
-
-        facilities['امنیت ملک'] = $('#information div:contains(امنیت ملک):last')
-            .next('div')
-            .find('> ul > li')
+        data['description'] = $('#res_detail > p')
+            .filter((i, e) => $(e).text().trim())
             .map((i, e) => $(e).text().trim())
             .get()
             .join('\n');
 
-        facilities['مناطق گردشگری اطراف'] = $('#information div:contains(مناطق گردشگری اطراف):last')
-            .next('div')
-            .find('> ul > li')
+        const facilities = {};
+        $('.row > div > .residence-space').map((i, e) => {
+            const title = $(e).find('> h3').text().trim();
+            const value = $(e)
+                .find('> ul > li')
+                .map((i, e) => $(e).text()?.trim())
+                .get()
+                .join('\n');
+            facilities[title] = value;
+            return `${title}:\n${value}`;
+        });
+
+        facilities['ظریفت اقامتگاه'] = $('.row > div > .people-add > .residence-space > ul > li')
             .map((i, e) => $(e).text().trim())
             .get()
             .join('\n');
@@ -298,27 +245,26 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
                 .map((key) => `${key}:\n${facilities[key]}`)
                 .join('\n\n') || null;
 
-        const baseCapacity = $('span:contains(ظرفیت پایه)').next('span').text().trim() || null;
-        const maximumCapacity = $('span:contains(حداکثر ظرفیت)').next('span').text().trim() || null;
-        if (baseCapacity && maximumCapacity) {
-            data['capacity'] = `ظرفیت پایه:${baseCapacity} - حداکثر ظرفیت:${maximumCapacity}`;
-        } else if (baseCapacity) {
-            data['capacity'] = `ظرفیت پایه:${baseCapacity}`;
-        } else if (maximumCapacity) {
-            data['capacity'] = `حداکثر ظرفیت:${maximumCapacity}`;
-        } else {
-            data['capacity'] = null;
-        }
+        data['capacity'] =
+            $('.row > div > .people-add > .residence-space > ul > li')
+                .map((i, e) => $(e).text().trim())
+                .get()
+                .join(' - ') || null;
 
-        data['room_count'] = $('span:contains(تعداد اتاق)').next('span').text().trim() || null;
+        data['room_count'] = $('.row > div > .residence-room > h3 > span').text().trim();
 
         const amenities = {};
+        const regex = /موقعیت|ظرفیت|ساعت|مدارک|قوانین/;
         data['amenities'] =
-            $('#services')
+            $('.row > div > .residence-area')
+                .filter((i, e) => {
+                    const headerText = $(e).find('> h3').text();
+                    return !regex.test(headerText);
+                })
                 .map((i, e) => {
-                    const title = 'امکانات اقامتگاه';
+                    const title = $(e).find('> h3').text().trim();
                     const ambients = $(e)
-                        .find('> div > div > div')
+                        .find('> ul > li')
                         .map((i, e) => $(e).text()?.trim())
                         .get()
                         .join('\n');
@@ -328,76 +274,102 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
                 .get()
                 .join('\n\n') || null;
 
-        data['rules'] =
-            $('#rules')
-                .find('> p')
-                .filter((i, e) => $(e).text()?.trim())
+        const rules = {};
+
+        if ($('.row > div > .price-person > ul > li').length) {
+            rules['ساعت ورود و خروج'] = $('.row > div > .price-person > ul > li')
+                .map((i, e) => {
+                    const title = $(e).find('> div').text().trim();
+                    const value = $(e)
+                        .find('> p')
+                        .map((i, e) => $(e).text()?.trim())
+                        .get()
+                        .join('\n')
+                        .trim();
+                    return `${title}:${value}`;
+                })
+                .get()
+                .join('\n');
+        }
+
+        if ($('#res_rol > ul > li').length) {
+            rules['مدارک تحویل اقامتگاه '] = $('#res_rol > ul > li')
                 .map((i, e) => $(e).text()?.trim())
                 .get()
-                .join('\n') || null;
+                .join('\n');
+        }
 
-        data['host_name'] = $('span:contains(میزبان شما)').next('a').text().trim() || null;
+        if ($('.prohibited-items > ul > li').length) {
+            rules['موارد ممنوعه'] = $('.prohibited-items > ul > li')
+                .map((i, e) => $(e).text()?.trim())
+                .get()
+                .join('\n');
+        }
+
+        if ($('.row > div > .residence-area > .box > p').length) {
+            rules['قوانین کنسلی'] =
+                $('.row > div > .residence-area > .box > p')
+                    .filter((i, e) => $(e).text().trim())
+                    .map((i, e) => $(e).text().trim())
+                    .get()
+                    .join('\n') || null;
+        }
+
+        data['rules'] =
+            Object.keys(rules)
+                .map((key) => `${key}:\n${rules[key]}`)
+                .join('\n\n') || null;
+
+        data['host_name'] =
+            $('.host-info > div > h6').text()?.replace('میزبان', '')?.replace(':', '')?.trim() ||
+            null;
 
         data['contact_number'] = $('selector').text().trim() ? $('selector').text().trim() : null;
 
         // Calendar
         const calendar = [];
-        $('table[class="table "]').map((i, e) => {
+        $('.calendar > .date-picker').map((i, e) => {
             let month = $(e)
-                .find('.month-year-name')
+                .find('.head > .title > h4')
                 .text()
                 .replace(/[\u06F0-\u06F90-9]/g, '')
                 .trim();
+
             let year = $(e)
-                .find('.month-year-name')
+                .find('.head > .title > h4')
                 .text()
                 .replace(/[^\u06F0-\u06F90-9]/g, '')
                 .trim();
+
             const monthDigit = persionMonthToDigit(month);
             const yearDigit = convertToEnglishNumber(year);
 
             let indexOfTodayTag = $(e)
-                .find('.days > tr > td[data-day]')
+                .find('div.days > div:not(.disable)')
                 .get()
-                .findIndex((item) => $(item).is('[data-today]'));
+                .findIndex((item) => $(item).hasClass('today'));
 
             if (indexOfTodayTag < 0) {
                 indexOfTodayTag = 0;
             }
 
             const reservable = $(e)
-                .find('.days > tr > td[data-day]')
+                .find('div.days > div:not(.disable)')
                 .slice(indexOfTodayTag)
                 .map((i, e) => {
-                    const day = convertToEnglishNumber(
-                        $(e)
-                            .find('.date-day')
-                            .contents()
-                            .filter(function () {
-                                return this.type === 'text' && this.data.trim() !== '';
-                            })
-                            .text()
-                            .trim()
-                    );
+                    const day = convertToEnglishNumber($(e).attr('date-day').split('-')[2]);
 
                     let price = convertToEnglishNumber(
                         $(e)
-                            .find('.date-day >.price')
+                            .find('> span')
                             .text()
                             ?.replace(/[^\u06F0-\u06F90-9]/g, '')
                             ?.trim()
                     );
 
-                    if (price) {
-                        price *= 1000;
-                    }
-
                     const date = `${yearDigit}\/${monthDigit}\/${day}`;
-                    const available = !$(e).is('[disabled="disabled"]');
+                    const available = !$(e).hasClass('hide');
                     let is_instant = false;
-                    if ($(e).find('img').length) {
-                        is_instant = true;
-                    }
                     calendar.push({ date, price, available, is_instant });
                 });
         });
@@ -407,15 +379,11 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
         // Comments
         const average_rating = {};
 
-        if ($('p:contains(امتیاز اقامتگاه):last').length) {
-            average_rating['امتیاز کلی'] = $('p:contains(امتیاز اقامتگاه):last')
-                .find('>span:first')
-                .text()
-                ?.replace(/[^\u06F0-\u06F90-9]/g, '')
-                ?.trim();
+        if ($('.average-rating > strong').length) {
+            average_rating['امتیاز کلی'] = $('.average-rating > strong').text()?.trim();
         }
 
-        $('#comments > div.form-row.border-bottom.border-2.mb-3.pb-3 > div').map((i, e) => {
+        $('Selector').map((i, e) => {
             const title = $(e)
                 .text()
                 ?.replace(/[\u06F0-\u06F90-9]/g, '')
@@ -434,20 +402,15 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
                 .join('\n') || null;
 
         const comments = [];
-        $(
-            '#comments > div[class="form-row mb-3 pb-1"]:not([style]) > div:last-child, #default_comment > div:last-child'
-        ).map((i, e) => {
-            const username =
-                $(e).find('> div.d-flex.mb-2 > div.text-success').text()?.trim() || null;
+        $('.comment-list > .comment > .comment-body').map((i, e) => {
+            const username = $(e).find('.fn:first').text()?.trim() || null;
 
-            let rating = $(e).find('svg').length || null;
+            let rating = $(e).find('p.stars > span').length || null;
 
-            let comment_date =
-                $(e).find('> div.d-flex.mb-2 > div.text-primary.ml-3').text().trim()?.trim() ||
-                null;
+            let comment_date = $(e).find('time').text().replace('در', '').trim() || null;
 
             const comment_text = $(e)
-                .find('>p')
+                .find('.comment-content > p:not([class])')
                 .filter((i, e) => $(e).text()?.trim())
                 .map((i, e) => $(e).text()?.trim())
                 .get()
@@ -460,10 +423,9 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
         // Download Images
         // const image_xpaths = ['//*[@id="Images"]//div[contains(@class, "Images_master__a6x_z")]'];
 
-        let imageUrls = $('.image-light-wide img')
-            .map((i, e) => 'https://anyja.ir' + $(e).attr('src')?.trim())
-            .get()
-            .filter((url) => url.includes('/assets/upload/images'));
+        let imageUrls = $('.residence-image a')
+            .map((i, e) => $(e).attr('href')?.trim())
+            .get();
 
         imageUrls = imageUrls.flat();
         imageUrls = [...new Set(imageUrls)];
