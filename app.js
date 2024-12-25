@@ -213,106 +213,77 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
 
         data['name'] = $('h1').text().trim() || null;
 
-        data['city'] = $('p.location').text().split(',')[1].trim();
+        data['city'] = $('#overView > p.text-muted:first').text().split('،')[1]?.trim();
 
-        data['province'] = $('p.location').text().split(',')[0].trim();
+        data['province'] = $('#overView > p.text-muted:first').text().split('،')[0]?.trim();
 
-        data['description'] = $('#res_detail > p')
+        data['description'] = $('#overView p.description')
             .filter((i, e) => $(e).text().trim())
             .map((i, e) => $(e).text().trim())
             .get()
             .join('\n');
 
         const facilities = {};
-        $('.row > div > .residence-space').map((i, e) => {
-            const title = $(e).find('> h3').text().trim();
-            const value = $(e)
-                .find('> ul > li')
-                .map((i, e) => $(e).text()?.trim())
-                .get()
-                .join('\n');
-            facilities[title] = value;
-            return `${title}:\n${value}`;
-        });
 
-        facilities['ظریفت اقامتگاه'] = $('.row > div > .people-add > .residence-space > ul > li')
-            .map((i, e) => $(e).text().trim())
-            .get()
-            .join('\n');
+        if ($('#overView span:contains(ظرفیت اقامتگاه):first').length) {
+            facilities['ظرفیت اقامتگاه'] = $('#overView span:contains(ظرفیت اقامتگاه):first')
+                .text()
+                .trim();
+        }
+
+        if ($('#overView span.icon-home-muted').length) {
+            facilities['تعداد اتاق'] = $('#overView span.icon-home-muted')
+                .parent()
+                .text()
+                .replace('-', '')
+                .trim();
+        }
+
+        if ($('#overView span.icon-bed-muted').length) {
+            facilities['تعداد تخت'] = $('#overView span.icon-bed-muted').parent().text().trim();
+        }
 
         data['facilities'] =
             Object.keys(facilities)
                 .map((key) => `${key}:\n${facilities[key]}`)
                 .join('\n\n') || null;
 
-        data['capacity'] =
-            $('.row > div > .people-add > .residence-space > ul > li')
-                .map((i, e) => $(e).text().trim())
-                .get()
-                .join(' - ') || null;
+        data['capacity'] = $('#overView span:contains(ظرفیت اقامتگاه):first').text() || null;
 
-        data['room_count'] = $('.row > div > .residence-room > h3 > span').text().trim();
+        data['room_count'] = $('#overView span.icon-home-muted')
+            .parent()
+            .text()
+            .replace('-', '')
+            .trim();
 
         const amenities = {};
-        const regex = /موقعیت|ظرفیت|ساعت|مدارک|قوانین/;
+        amenities['امکانات اقامتگاه'] = $('ul.room-facilities > li')
+            .filter((i, e) => $(e).text().trim())
+            .map((i, e) => $(e).text().trim())
+            .get()
+            .join('\n');
+
         data['amenities'] =
-            $('.row > div > .residence-area')
-                .filter((i, e) => {
-                    const headerText = $(e).find('> h3').text();
-                    return !regex.test(headerText);
-                })
-                .map((i, e) => {
-                    const title = $(e).find('> h3').text().trim();
-                    const ambients = $(e)
-                        .find('> ul > li')
-                        .map((i, e) => $(e).text()?.trim())
-                        .get()
-                        .join('\n');
-                    amenities[title] = ambients;
-                    return `${title}:\n${ambients}`;
-                })
-                .get()
+            Object.keys(amenities)
+                .map((key) => `${key}:\n${amenities[key]}`)
                 .join('\n\n') || null;
 
         const rules = {};
 
-        if ($('.row > div > .price-person > ul > li').length) {
-            rules['ساعت ورود و خروج'] = $('.row > div > .price-person > ul > li')
-                .map((i, e) => {
-                    const title = $(e).find('> div').text().trim();
-                    const value = $(e)
-                        .find('> p')
-                        .map((i, e) => $(e).text()?.trim())
-                        .get()
-                        .join('\n')
-                        .trim();
-                    return `${title}:${value}`;
-                })
+        if ($('#roomRules > div:contains(ورود):first').length) {
+            rules['ساعت ورود و خروج'] = $('#roomRules > div:contains(ورود):first')
+                .find('>p')
+                .map((i, e) => $(e).text().trim())
                 .get()
-                .join('\n');
+                .join(' - ');
         }
 
-        if ($('#res_rol > ul > li').length) {
-            rules['مدارک تحویل اقامتگاه '] = $('#res_rol > ul > li')
+        if ($('#roomRules > ul.rules > li').length) {
+            rules['سایر قوانین اقامتگاه'] = $('#roomRules > ul.rules > li')
+                .filter((i, e) => $(e).text()?.trim())
                 .map((i, e) => $(e).text()?.trim())
                 .get()
                 .join('\n');
-        }
-
-        if ($('.prohibited-items > ul > li').length) {
-            rules['موارد ممنوعه'] = $('.prohibited-items > ul > li')
-                .map((i, e) => $(e).text()?.trim())
-                .get()
-                .join('\n');
-        }
-
-        if ($('.row > div > .residence-area > .box > p').length) {
-            rules['قوانین کنسلی'] =
-                $('.row > div > .residence-area > .box > p')
-                    .filter((i, e) => $(e).text().trim())
-                    .map((i, e) => $(e).text().trim())
-                    .get()
-                    .join('\n') || null;
         }
 
         data['rules'] =
@@ -320,23 +291,21 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
                 .map((key) => `${key}:\n${rules[key]}`)
                 .join('\n\n') || null;
 
-        data['host_name'] =
-            $('.host-info > div > h6').text()?.replace('میزبان', '')?.replace(':', '')?.trim() ||
-            null;
+        data['host_name'] = $('#mizboonCharacteristics .mizboon-name').text().trim() || null;
 
         data['contact_number'] = $('selector').text().trim() ? $('selector').text().trim() : null;
 
         // Calendar
         const calendar = [];
-        $('.calendar > .date-picker').map((i, e) => {
+        $('#roomCalendar .calendar-view').map((i, e) => {
             let month = $(e)
-                .find('.head > .title > h4')
+                .find('span.calendar-year-month')
                 .text()
                 .replace(/[\u06F0-\u06F90-9]/g, '')
                 .trim();
 
             let year = $(e)
-                .find('.head > .title > h4')
+                .find('span.calendar-year-month')
                 .text()
                 .replace(/[^\u06F0-\u06F90-9]/g, '')
                 .trim();
@@ -345,30 +314,38 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
             const yearDigit = convertToEnglishNumber(year);
 
             let indexOfTodayTag = $(e)
-                .find('div.days > div:not(.disable)')
+                .find(
+                    '> div.calendar-month-view > div.calendar-week-view > .calendar-day-view[data-day]'
+                )
                 .get()
-                .findIndex((item) => $(item).hasClass('today'));
+                .findIndex((item) => $(item).hasClass('calendar-day-view-today'));
 
             if (indexOfTodayTag < 0) {
                 indexOfTodayTag = 0;
             }
 
             const reservable = $(e)
-                .find('div.days > div:not(.disable)')
+                .find(
+                    '> div.calendar-month-view > div.calendar-week-view > .calendar-day-view[data-day]'
+                )
                 .slice(indexOfTodayTag)
                 .map((i, e) => {
-                    const day = convertToEnglishNumber($(e).attr('date-day').split('-')[2]);
+                    const day = convertToEnglishNumber($(e).attr('data-day').trim());
 
                     let price = convertToEnglishNumber(
                         $(e)
-                            .find('> span')
+                            .find('.extra-content:first')
                             .text()
                             ?.replace(/[^\u06F0-\u06F90-9]/g, '')
                             ?.trim()
                     );
 
+                    if (price) {
+                        price *= 1000;
+                    }
+
                     const date = `${yearDigit}\/${monthDigit}\/${day}`;
-                    const available = !$(e).hasClass('hide');
+                    const available = !$(e).hasClass('calendar-day-view-disabled');
                     let is_instant = false;
                     calendar.push({ date, price, available, is_instant });
                 });
