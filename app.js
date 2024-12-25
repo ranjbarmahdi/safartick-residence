@@ -453,7 +453,7 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
             .get();
 
         imageUrls = imageUrls.flat();
-        imageUrls = [...new Set(imageUrls)];
+        imageUrls = [...new Set(imageUrls)].slice(0, 10);
         console.log('Download Images');
         await downloadImages(imageUrls, imagesDIR, data.sku);
 
