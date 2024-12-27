@@ -196,7 +196,7 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
         await delay(5000);
 
         try {
-            await page.waitForSelector('.residence-image a', { timeout: 5000 });
+            await page.waitForSelector('.gallery-slider > a.lslide', { timeout: 5000 });
             console.log('Images selector find');
         } catch (error) {
             console.log('Images selector not find');
@@ -213,35 +213,17 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
 
         data['name'] = $('h1').text().trim() || null;
 
-        data['city'] = $('#overView > p.text-muted:first').text().split('،')[1]?.trim();
+        data['city'] = $('.marker.icon.grey-text').parent().text().split(',')[1]?.trim();
 
-        data['province'] = $('#overView > p.text-muted:first').text().split('،')[0]?.trim();
+        data['province'] = $('.marker.icon.grey-text').parent().text().split(',')[0]?.trim();
 
-        data['description'] = $('#overView p.description')
+        data['description'] = $('.place-description')
             .filter((i, e) => $(e).text().trim())
             .map((i, e) => $(e).text().trim())
             .get()
             .join('\n');
 
         const facilities = {};
-
-        if ($('#overView span:contains(ظرفیت اقامتگاه):first').length) {
-            facilities['ظرفیت اقامتگاه'] = $('#overView span:contains(ظرفیت اقامتگاه):first')
-                .text()
-                .trim();
-        }
-
-        if ($('#overView span.icon-home-muted').length) {
-            facilities['تعداد اتاق'] = $('#overView span.icon-home-muted')
-                .parent()
-                .text()
-                .replace('-', '')
-                .trim();
-        }
-
-        if ($('#overView span.icon-bed-muted').length) {
-            facilities['تعداد تخت'] = $('#overView span.icon-bed-muted').parent().text().trim();
-        }
 
         data['facilities'] =
             Object.keys(facilities)
