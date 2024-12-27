@@ -379,15 +379,17 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
                 .join('\n') || null;
 
         const comments = [];
-        $('.comment-list > .comment > .comment-body').map((i, e) => {
-            const username = $(e).find('.fn:first').text()?.trim() || null;
+        $('#comments > .user-comments > div > .media-body').map((i, e) => {
+            const username =
+                $(e).find('.user-image:first').next('div').find('>span:first').text()?.trim() ||
+                null;
 
             let rating = $(e).find('p.stars > span').length || null;
 
-            let comment_date = $(e).find('time').text().replace('در', '').trim() || null;
+            let comment_date = $(e).find('selector').text().replace('در', '').trim() || null;
 
             const comment_text = $(e)
-                .find('.comment-content > p:not([class])')
+                .find('> .mizboon-collapse > .collapse-content > p.description')
                 .filter((i, e) => $(e).text()?.trim())
                 .map((i, e) => $(e).text()?.trim())
                 .get()
@@ -400,7 +402,7 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
         // Download Images
         // const image_xpaths = ['//*[@id="Images"]//div[contains(@class, "Images_master__a6x_z")]'];
 
-        let imageUrls = $('.residence-image a')
+        let imageUrls = $('div.owl-stage > div > a')
             .map((i, e) => $(e).attr('href')?.trim())
             .get();
 
