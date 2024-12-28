@@ -224,22 +224,41 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
             .join('\n');
 
         const facilities = {};
-
         data['facilities'] =
-            Object.keys(facilities)
-                .map((key) => `${key}:\n${facilities[key]}`)
+            $('div.nine.wide.column > div > div.no-marg')
+                .map((i, e) => {
+                    const title = $(e).find('> div:first').text()?.trim();
+                    const ambients = $(e)
+                        .find('>div:last')
+                        .text()
+                        .replaceAll('\n', ' ')
+                        .replaceAll('\t', ' ')
+                        .split(' ')
+                        .filter((t) => t.trim())
+                        .join(' ');
+                    facilities[title] = ambients;
+                    return `${title}:\n${ambients}`;
+                })
+                .get()
                 .join('\n\n') || null;
 
-        data['capacity'] = $('#overView span:contains(ظرفیت اقامتگاه):first').text() || null;
+        data['capacity'] = null;
+        if ('ظرفیت استاندارد' in facilities && 'حداکثر ظرفیت' in facilities) {
+            data[
+                'capacity'
+            ] = `ظرفیت پایه:${facilities['ظرفیت استاندارد']} - حداکثر ظرفیت:${facilities['حداکثر ظرفیت']}`;
+        } else if ('ظرفیت استاندارد' in facilities) {
+            data['capacity'] = `ظرفیت پایه:${facilities['ظرفیت استاندارد']}`;
+        } else if ('حداکثر ظرفیت' in facilities) {
+            data['capacity'] = `حداکثر ظرفیت:${facilities['حداکثر ظرفیت']}`;
+        }
 
-        data['room_count'] = $('#overView span.icon-home-muted')
-            .parent()
-            .text()
-            .replace('-', '')
-            .trim();
+        data['room_count'] = facilities['تعداد اتاق'] || null;
 
         const amenities = {};
-        amenities['امکانات اقامتگاه'] = $('ul.room-facilities > li')
+        amenities['امکانات اقامتگاه'] = $('div:contains(امکانات اقامتگاه):last')
+            .next('div.three')
+            .find('>div.column .content')
             .filter((i, e) => $(e).text().trim())
             .map((i, e) => $(e).text().trim())
             .get()
@@ -252,18 +271,29 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
 
         const rules = {};
 
-        if ($('#roomRules > div:contains(ورود):first').length) {
-            rules['ساعت ورود و خروج'] = $('#roomRules > div:contains(ورود):first')
+        if ($('div.content:contains(تحویل و تخلیه)').next('div.comments').length) {
+            rules['تحویل و تخلیه'] = $('div.content:contains(تحویل و تخلیه)')
+                .next('div.comments')
                 .find('>p')
-                .map((i, e) => $(e).text().trim())
+                .map((i, e) => $(e).text().replaceAll('*', '').trim())
                 .get()
-                .join(' - ');
+                .join('\n');
         }
 
-        if ($('#roomRules > ul.rules > li').length) {
-            rules['سایر قوانین اقامتگاه'] = $('#roomRules > ul.rules > li')
-                .filter((i, e) => $(e).text()?.trim())
-                .map((i, e) => $(e).text()?.trim())
+        if ($('div.content:contains(قوانین و مقررات)').next('div.comments').length) {
+            rules['سایر قوانین'] = $('div.content:contains(قوانین و مقررات)')
+                .next('div.comments')
+                .find('>p')
+                .map((i, e) => $(e).text().replaceAll('*', '').trim())
+                .get()
+                .join('\n');
+        }
+
+        if ($('div.content:contains(شرایط لغو)').next('div.comments').length) {
+            rules['قوانین کنسلی'] = $('div.content:contains(شرایط لغو)')
+                .next('div.comments')
+                .find('>p')
+                .map((i, e) => $(e).text().replaceAll('*', '').trim())
                 .get()
                 .join('\n');
         }
@@ -273,21 +303,22 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
                 .map((key) => `${key}:\n${rules[key]}`)
                 .join('\n\n') || null;
 
-        data['host_name'] = $('#mizboonCharacteristics .mizboon-name').text().trim() || null;
+        data['host_name'] =
+            $('div.nine.wide.column > .horizontal > .item > .content').text().trim() || null;
 
         data['contact_number'] = $('selector').text().trim() ? $('selector').text().trim() : null;
 
         // Calendar
         const calendar = [];
-        $('#roomCalendar .calendar-view').map((i, e) => {
+        $('div.calendar.pad-10').map((i, e) => {
             let month = $(e)
-                .find('span.calendar-year-month')
+                .find('>h3')
                 .text()
                 .replace(/[\u06F0-\u06F90-9]/g, '')
                 .trim();
 
             let year = $(e)
-                .find('span.calendar-year-month')
+                .find('>h3')
                 .text()
                 .replace(/[^\u06F0-\u06F90-9]/g, '')
                 .trim();
@@ -296,38 +327,30 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
             const yearDigit = convertToEnglishNumber(year);
 
             let indexOfTodayTag = $(e)
-                .find(
-                    '> div.calendar-month-view > div.calendar-week-view > .calendar-day-view[data-day]'
-                )
+                .find('div.has-value')
                 .get()
-                .findIndex((item) => $(item).hasClass('calendar-day-view-today'));
+                .findIndex((item) => $(item).hasClass('today'));
 
             if (indexOfTodayTag < 0) {
                 indexOfTodayTag = 0;
             }
 
             const reservable = $(e)
-                .find(
-                    '> div.calendar-month-view > div.calendar-week-view > .calendar-day-view[data-day]'
-                )
+                .find('div.has-value')
                 .slice(indexOfTodayTag)
                 .map((i, e) => {
-                    const day = convertToEnglishNumber($(e).attr('data-day').trim());
+                    const day = convertToEnglishNumber($(e).attr('day').trim());
 
                     let price = convertToEnglishNumber(
                         $(e)
-                            .find('.extra-content:first')
+                            .find('.discounted-price-label')
                             .text()
                             ?.replace(/[^\u06F0-\u06F90-9]/g, '')
                             ?.trim()
                     );
 
-                    if (price) {
-                        price *= 1000;
-                    }
-
                     const date = `${yearDigit}\/${monthDigit}\/${day}`;
-                    const available = !$(e).hasClass('calendar-day-view-disabled');
+                    const available = !$(e).hasClass('disabled');
                     let is_instant = false;
                     calendar.push({ date, price, available, is_instant });
                 });
