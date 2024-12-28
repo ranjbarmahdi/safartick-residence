@@ -213,11 +213,13 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
 
         data['name'] = $('h1').text().trim() || null;
 
-        data['city'] = $('.marker.icon.grey-text').parent().text().split(',')[1]?.trim();
+        data['city'] =
+            $('#shortcut-tabs').prev('div').find('> h4:first').text().split('،')[1]?.trim() || null;
 
-        data['province'] = $('.marker.icon.grey-text').parent().text().split(',')[0]?.trim();
+        data['province'] =
+            $('#shortcut-tabs').prev('div').find('> h4:first').text().split('،')[0]?.trim() || null;
 
-        data['description'] = $('.place-description')
+        data['description'] = $('#content .container-fluid:first > div > div > p:first')
             .filter((i, e) => $(e).text().trim())
             .map((i, e) => $(e).text().trim())
             .get()
@@ -225,17 +227,10 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
 
         const facilities = {};
         data['facilities'] =
-            $('div.nine.wide.column > div > div.no-marg')
+            $('#properties-container > ul > li')
                 .map((i, e) => {
-                    const title = $(e).find('> div:first').text()?.trim();
-                    const ambients = $(e)
-                        .find('>div:last')
-                        .text()
-                        .replaceAll('\n', ' ')
-                        .replaceAll('\t', ' ')
-                        .split(' ')
-                        .filter((t) => t.trim())
-                        .join(' ');
+                    const title = $(e).text().split(':')[0]?.trim();
+                    const ambients = $(e).text().split(':')[1]?.trim();
                     facilities[title] = ambients;
                     return `${title}:\n${ambients}`;
                 })
@@ -246,19 +241,15 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
         if ('ظرفیت استاندارد' in facilities && 'حداکثر ظرفیت' in facilities) {
             data[
                 'capacity'
-            ] = `ظرفیت پایه:${facilities['ظرفیت استاندارد']} - حداکثر ظرفیت:${facilities['حداکثر ظرفیت']}`;
+            ] = `ظرفیت پایه:${facilities['ظرفیت استاندارد']} - ظرفیت اضافه:${facilities['ظرفیت اضافه']}`;
         } else if ('ظرفیت استاندارد' in facilities) {
             data['capacity'] = `ظرفیت پایه:${facilities['ظرفیت استاندارد']}`;
-        } else if ('حداکثر ظرفیت' in facilities) {
-            data['capacity'] = `حداکثر ظرفیت:${facilities['حداکثر ظرفیت']}`;
         }
 
-        data['room_count'] = facilities['تعداد اتاق'] || null;
+        data['room_count'] = facilities['تعداد اتاق خواب'] || null;
 
         const amenities = {};
-        amenities['امکانات اقامتگاه'] = $('div:contains(امکانات اقامتگاه):last')
-            .next('div.three')
-            .find('>div.column .content')
+        amenities['امکانات اقامتگاه'] = $('#amenities-container .amenity-item .amenity-name')
             .filter((i, e) => $(e).text().trim())
             .map((i, e) => $(e).text().trim())
             .get()
@@ -271,29 +262,45 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
 
         const rules = {};
 
-        if ($('div.content:contains(تحویل و تخلیه)').next('div.comments').length) {
-            rules['تحویل و تخلیه'] = $('div.content:contains(تحویل و تخلیه)')
-                .next('div.comments')
-                .find('>p')
-                .map((i, e) => $(e).text().replaceAll('*', '').trim())
+        if ($('.card-body:contains(ساعت)').length) {
+            rules['تحویل و تخلیه'] = $('.card-body:contains(ساعت)')
+                .map((i, e) => {
+                    const title = $(e).find('>h5:first').text().trim();
+                    const ambients = $(e)
+                        .find('> h5:gt(0)')
+                        .map((i, e) => $(e).text().trim())
+                        .get()
+                        .join(' ');
+                    facilities[title] = ambients;
+                    return `${title}:${ambients}`;
+                })
                 .get()
                 .join('\n');
         }
 
-        if ($('div.content:contains(قوانین و مقررات)').next('div.comments').length) {
-            rules['سایر قوانین'] = $('div.content:contains(قوانین و مقررات)')
-                .next('div.comments')
-                .find('>p')
-                .map((i, e) => $(e).text().replaceAll('*', '').trim())
+        if ($('#rules-title').next('div').find('ul > li').length) {
+            rules['سایر قوانین'] = $('#rules-title')
+                .next('div')
+                .find('ul > li')
+                .map((i, e) => $(e).text().trim())
                 .get()
                 .join('\n');
         }
 
-        if ($('div.content:contains(شرایط لغو)').next('div.comments').length) {
-            rules['قوانین کنسلی'] = $('div.content:contains(شرایط لغو)')
-                .next('div.comments')
-                .find('>p')
-                .map((i, e) => $(e).text().replaceAll('*', '').trim())
+        if ($('#cancellation-policies-title').next('ul').find('> li').length) {
+            rules['قوانین کنسلی'] = $('#cancellation-policies-title')
+                .next('ul')
+                .find('> li')
+                .map((i, e) => {
+                    const title = $(e).find('>div:first').text().trim();
+                    const ambients = $(e)
+                        .find('> ul > li')
+                        .map((i, e) => $(e).text().trim())
+                        .get()
+                        .join('\n');
+                    facilities[title] = ambients;
+                    return `${title}:\n${ambients}`;
+                })
                 .get()
                 .join('\n');
         }
@@ -303,22 +310,21 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
                 .map((key) => `${key}:\n${rules[key]}`)
                 .join('\n\n') || null;
 
-        data['host_name'] =
-            $('div.nine.wide.column > .horizontal > .item > .content').text().trim() || null;
+        data['host_name'] = $('.host-name:first').text().trim() || null;
 
         data['contact_number'] = $('selector').text().trim() ? $('selector').text().trim() : null;
 
         // Calendar
         const calendar = [];
-        $('div.calendar.pad-10').map((i, e) => {
+        $('div.calendar').map((i, e) => {
             let month = $(e)
-                .find('>h3')
+                .find('.month-year:first')
                 .text()
                 .replace(/[\u06F0-\u06F90-9]/g, '')
                 .trim();
 
             let year = $(e)
-                .find('>h3')
+                .find('.month-year:first')
                 .text()
                 .replace(/[^\u06F0-\u06F90-9]/g, '')
                 .trim();
@@ -326,31 +332,27 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
             const monthDigit = persionMonthToDigit(month);
             const yearDigit = convertToEnglishNumber(year);
 
-            let indexOfTodayTag = $(e)
-                .find('div.has-value')
-                .get()
-                .findIndex((item) => $(item).hasClass('today'));
-
-            if (indexOfTodayTag < 0) {
-                indexOfTodayTag = 0;
-            }
-
             const reservable = $(e)
-                .find('div.has-value')
-                .slice(indexOfTodayTag)
+                .find('.week > td > div:not(.old)')
                 .map((i, e) => {
-                    const day = convertToEnglishNumber($(e).attr('day').trim());
+                    const day = convertToEnglishNumber(
+                        $(e).find('.day-number:first').text().trim()
+                    );
 
                     let price = convertToEnglishNumber(
                         $(e)
-                            .find('.discounted-price-label')
+                            .find('.day-price:first')
                             .text()
                             ?.replace(/[^\u06F0-\u06F90-9]/g, '')
                             ?.trim()
                     );
 
+                    if (price) {
+                        price *= 1000;
+                    }
+
                     const date = `${yearDigit}\/${monthDigit}\/${day}`;
-                    const available = !$(e).hasClass('disabled');
+                    const available = !$(e).hasClass('reserved');
                     let is_instant = false;
                     calendar.push({ date, price, available, is_instant });
                 });
