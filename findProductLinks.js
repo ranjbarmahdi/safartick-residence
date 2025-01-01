@@ -6,6 +6,7 @@ const {
     delay,
     isNumeric,
     convertToEnglishNumber,
+    scrollToEnd,
 } = require('./utils');
 const db = require('./config.js');
 const { timeout } = require('puppeteer');
@@ -48,11 +49,13 @@ async function findAllMainLinks(page, initialUrl) {
         const html = await page.content();
         const $ = cheerio.load(html);
 
-        // Getting All Main Urls In This Page
-        const mainLinks = [];
+        const mainLinks = ['https://rentivila.com/archive?destination=province-27'];
+        // for (let i = 1; i <= 31; i++) {
+        //     mainLinks.push(`https://rentivila.com/archive?destination=province-${i}`);
+        // }
 
         // Push This Page Products Urls To allProductsLinks
-        allMainLinks.push(initialUrl);
+        allMainLinks.push(...mainLinks);
     } catch (error) {
         console.log('Error In findAllMainLinks function', error.message);
     }
@@ -75,8 +78,8 @@ async function findAllPagesLinks(page, mainLinks) {
             await delay(5000);
 
             try {
-                await page.waitForSelector('.pagination-ul > li > .pagination-link', {
-                    timeout: 5000,
+                await page.waitForSelector('#pagination-for-desktop > ul', {
+                    timeout: 2000,
                 });
                 console.log('pagination element find');
             } catch (error) {
@@ -87,13 +90,13 @@ async function findAllPagesLinks(page, mainLinks) {
             const $ = cheerio.load(html);
 
             // find last page number and preduce other pages urls
-            const paginationElement = $('.vilapila-paginate > a');
+            const paginationElement = $('#pagination-for-desktop > ul');
             if (paginationElement.length) {
                 lsatPageNumber = Math.max(
-                    ...$('.vilapila-paginate > a')
+                    ...$('#pagination-for-desktop > ul > li')
                         .map((i, e) =>
                             $(e)
-                                .attr('href')
+                                .text()
                                 .replace(/[^\u06F0-\u06F90-9]/g, '')
                                 .trim()
                         )
@@ -104,7 +107,7 @@ async function findAllPagesLinks(page, mainLinks) {
 
                 console.log('lsatPageNumber :', lsatPageNumber);
                 for (let j = 1; j <= lsatPageNumber; j++) {
-                    const newUrl = 'https://vilapila.ir/search' + `?page=${j}`;
+                    const newUrl = url + `&page=${j}`;
                     allPagesLinks.push(newUrl);
                 }
             } else {
@@ -135,8 +138,10 @@ async function findAllProductsLinks(page, allPagesLinks) {
             console.log('-------sleep 5 second');
             await delay(5000);
 
+            await scrollToEnd(page);
+
             try {
-                await page.waitForSelector('.place-item > a', { timeout: 60000 });
+                await page.waitForSelector('a.house-card', { timeout: 5000 });
             } catch (error) {
                 console.log('residence selector not found');
             }
@@ -151,8 +156,8 @@ async function findAllProductsLinks(page, allPagesLinks) {
                 const $ = cheerio.load(html);
 
                 // Getting All Products Urls In This Page
-                const productsUrls = $('.place-item > a')
-                    .map((i, e) => 'https://vilapila.ir' + $(e).attr('href').trim())
+                const productsUrls = $('a.house-card')
+                    .map((i, e) => 'https://rentivila.com' + $(e).attr('href').trim())
                     .get();
 
                 // insert prooduct links to unvisited
@@ -182,7 +187,7 @@ async function findAllProductsLinks(page, allPagesLinks) {
 // ============================================ Main
 async function main() {
     try {
-        const INITIAL_PAGE_URL = ['https://vilapila.ir/search?page=1'];
+        const INITIAL_PAGE_URL = ['https://rentivila.com'];
 
         // get random proxy
         const proxyList = [''];
@@ -192,8 +197,8 @@ async function main() {
         const browser = await getBrowser(randomProxy, true, false);
         const page = await browser.newPage();
         await page.setViewport({
-            width: 1920,
-            height: 1080,
+            width: 1440,
+            height: 860,
         });
 
         for (const u of INITIAL_PAGE_URL) {
