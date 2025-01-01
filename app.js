@@ -386,17 +386,15 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
                 .join('\n') || null;
 
         const comments = [];
-        $('#comments > .user-comments > div > .media-body').map((i, e) => {
-            const username =
-                $(e).find('.user-image:first').next('div').find('>span:first').text()?.trim() ||
-                null;
+        $('selector').map((i, e) => {
+            const username = $(e).find('selector').text()?.trim() || null;
 
             let rating = $(e).find('p.stars > span').length || null;
 
             let comment_date = $(e).find('selector').text().replace('در', '').trim() || null;
 
             const comment_text = $(e)
-                .find('> .mizboon-collapse > .collapse-content > p.description')
+                .find('> selector')
                 .filter((i, e) => $(e).text()?.trim())
                 .map((i, e) => $(e).text()?.trim())
                 .get()
@@ -409,8 +407,12 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
         // Download Images
         // const image_xpaths = ['//*[@id="Images"]//div[contains(@class, "Images_master__a6x_z")]'];
 
-        let imageUrls = $('div.owl-stage > div > a')
-            .map((i, e) => $(e).attr('href')?.trim())
+        let imageUrls = $('#gallery img')
+            .map(
+                (i, e) =>
+                    'https://rentivila.com' +
+                    $(e).attr('src')?.replace('thumbnails', 'larges').trim()
+            )
             .get();
 
         imageUrls = imageUrls.flat();
