@@ -49,10 +49,10 @@ async function findAllMainLinks(page, initialUrl) {
         const html = await page.content();
         const $ = cheerio.load(html);
 
-        const mainLinks = ['https://rentivila.com/archive?destination=province-27'];
-        // for (let i = 1; i <= 31; i++) {
-        //     mainLinks.push(`https://rentivila.com/archive?destination=province-${i}`);
-        // }
+        const mainLinks = [];
+        for (let i = 1; i <= 31; i++) {
+            mainLinks.push(`https://rentivila.com/archive?destination=province-${i}`);
+        }
 
         // Push This Page Products Urls To allProductsLinks
         allMainLinks.push(...mainLinks);
