@@ -196,7 +196,7 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
         await delay(5000);
 
         try {
-            await page.waitForSelector('.gallery-slider > a.lslide', { timeout: 5000 });
+            await page.waitForSelector('a.lslide', { timeout: 5000 });
             console.log('Images selector find');
         } catch (error) {
             console.log('Images selector not find');
@@ -306,7 +306,7 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
         data['host_name'] =
             $('div.nine.wide.column > .horizontal > .item > .content').text().trim() || null;
 
-        data['contact_number'] = $('selector').text().trim() ? $('selector').text().trim() : null;
+        data['contact_number'] = $('a.indigo').text().trim() || null;
 
         // Calendar
         const calendar = [];
@@ -407,8 +407,8 @@ async function scrapResidence(page, residenceURL, imagesDIR) {
         // Download Images
         // const image_xpaths = ['//*[@id="Images"]//div[contains(@class, "Images_master__a6x_z")]'];
 
-        let imageUrls = $('div.owl-stage > div > a')
-            .map((i, e) => $(e).attr('href')?.trim())
+        let imageUrls = $('a.lslide')
+            .map((i, e) => 'https://vilapila.ir' + $(e).attr('href')?.trim())
             .get();
 
         imageUrls = imageUrls.flat();
